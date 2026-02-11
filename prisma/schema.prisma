@@ -1,0 +1,34 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Agent {
+  id                  String   @id @default(uuid())
+  name                String
+  agentCode           String   @unique
+  email               String   @unique
+  password            String
+  mobile              String
+  countryCode         String   @default("+974")
+  designation         String?
+  photo               String?
+  bookmarkLimit       Int      @default(50)
+  onlinePropertyLimit Int      @default(0)
+  role                Role     @default(AGENT)
+  isActive            Boolean  @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@map("agents")
+}
+
+enum Role {
+  AGENT
+  ADMIN
+  MANAGER
+}
