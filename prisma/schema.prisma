@@ -7,6 +7,87 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model Property {
+  id        String  @id @default(cuid())
+  refNo     String  @unique
+  name      String
+  shortTerm Boolean @default(false)
+  unitNo    String?
+
+  category String
+  type     String
+  layout   String?
+
+  bedrooms  Int?
+  bathrooms Int?
+  maidRoom  Boolean? @default(false)
+
+  balcony String?
+  view    String?
+
+  furnishing String?
+  sizeSqm    Float?
+
+  price         Decimal   @db.Decimal(14, 2)
+  currency      String    @default("QAR")
+  commissionPct Float?
+  status        String
+  expiryDate    DateTime?
+
+  locationCode String?
+  address      String?
+  latitude     Float?
+  longitude    Float?
+
+  access                   String?
+  utilitiesIncluded        Boolean? @default(false)
+  utilitiesWaterElec       Boolean? @default(false)
+  utilitiesInternet        Boolean? @default(false)
+  utilitiesServiceCharge   Boolean? @default(false)
+  utilitiesSewage          Boolean? @default(false)
+  utilitiesDistrictCooling Boolean? @default(false)
+
+  facilitiesEnabled   Boolean? @default(false)
+  facSharedPool       Boolean? @default(false)
+  facClubHouse        Boolean? @default(false)
+  facSauna            Boolean? @default(false)
+  facCinema           Boolean? @default(false)
+  facSquash           Boolean? @default(false)
+  facMultiPurposeHall Boolean? @default(false)
+  facCateringService  Boolean? @default(false)
+  facPrivatePool      Boolean? @default(false)
+  facKidsPlay         Boolean? @default(false)
+  facSteamRoom        Boolean? @default(false)
+  facPadelCourt       Boolean? @default(false)
+  facBasketBall       Boolean? @default(false)
+  facTennis           Boolean? @default(false)
+  facMosque           Boolean? @default(false)
+  facLaundryService   Boolean? @default(false)
+  facGym              Boolean? @default(false)
+  facJacuzzi          Boolean? @default(false)
+  facBBQ              Boolean? @default(false)
+  facFootball         Boolean? @default(false)
+  facCoWorking        Boolean? @default(false)
+  facCleaningService  Boolean? @default(false)
+
+  propertyDetails String?
+  propertyNotes   String?
+
+  imageUrls String[] @default([])
+  documents String[] @default([])
+
+  landlordId String?
+  agentId    String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([type])
+  @@index([category])
+  @@index([locationCode])
+}
+
 model Agent {
   id                  String   @id @default(uuid())
   name                String
@@ -30,5 +111,4 @@ model Agent {
 enum Role {
   AGENT
   ADMIN
-  MANAGER
 }
