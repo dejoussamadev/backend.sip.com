@@ -7,89 +7,13 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Property {
-  id        String  @id @default(cuid())
-  refNo     String  @unique
-  name      String
-  shortTerm Boolean @default(false)
-  unitNo    String?
-
-  category String
-  type     String
-  layout   String?
-
-  bedrooms  Int?
-  bathrooms Int?
-  maidRoom  Boolean? @default(false)
-
-  balcony String?
-  view    String?
-
-  furnishing String?
-  sizeSqm    Float?
-
-  price         Decimal   @db.Decimal(14, 2)
-  currency      String    @default("QAR")
-  commissionPct Float?
-  status        String
-  expiryDate    DateTime?
-
-  locationCode String?
-  address      String?
-  latitude     Float?
-  longitude    Float?
-
-  access                   String?
-  utilitiesIncluded        Boolean? @default(false)
-  utilitiesWaterElec       Boolean? @default(false)
-  utilitiesInternet        Boolean? @default(false)
-  utilitiesServiceCharge   Boolean? @default(false)
-  utilitiesSewage          Boolean? @default(false)
-  utilitiesDistrictCooling Boolean? @default(false)
-
-  facilitiesEnabled   Boolean? @default(false)
-  facSharedPool       Boolean? @default(false)
-  facClubHouse        Boolean? @default(false)
-  facSauna            Boolean? @default(false)
-  facCinema           Boolean? @default(false)
-  facSquash           Boolean? @default(false)
-  facMultiPurposeHall Boolean? @default(false)
-  facCateringService  Boolean? @default(false)
-  facPrivatePool      Boolean? @default(false)
-  facKidsPlay         Boolean? @default(false)
-  facSteamRoom        Boolean? @default(false)
-  facPadelCourt       Boolean? @default(false)
-  facBasketBall       Boolean? @default(false)
-  facTennis           Boolean? @default(false)
-  facMosque           Boolean? @default(false)
-  facLaundryService   Boolean? @default(false)
-  facGym              Boolean? @default(false)
-  facJacuzzi          Boolean? @default(false)
-  facBBQ              Boolean? @default(false)
-  facFootball         Boolean? @default(false)
-  facCoWorking        Boolean? @default(false)
-  facCleaningService  Boolean? @default(false)
-
-  propertyDetails String?
-  propertyNotes   String?
-
-  imageUrls String[] @default([])
-  documents String[] @default([])
-
-  landlordId String?
-  agentId    String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([status])
-  @@index([type])
-  @@index([category])
-  @@index([locationCode])
+enum Role {
+  AGENT
+  ADMIN
 }
 
 model Agent {
-  id                  String   @id @default(uuid())
+  id                  Int      @id @default(autoincrement())
   name                String
   agentCode           String   @unique
   email               String   @unique
@@ -105,10 +29,144 @@ model Agent {
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
+  properties Property[]
+
   @@map("agents")
 }
 
-enum Role {
-  AGENT
-  ADMIN
+model Property {
+  id               Int     @id @default(autoincrement())
+  reference_number String  @unique
+  name             String
+  shortTerm        Boolean @default(false)
+  unit_number      String?
+
+  category        PropertyCategory?   @relation(fields: [category_id], references: [id])
+  category_id     Int?
+  type            PropertyType?       @relation(fields: [type_id], references: [id])
+  type_id         Int?
+  layout          PropertyLayout?     @relation(fields: [layout_id], references: [id])
+  layout_id       Int?
+  bathrooms       Int
+  size            Float
+  location        PropertyLocation?   @relation(fields: [location_id], references: [id])
+  location_id     Int?
+  maid_room       Boolean
+  furnishing      PropertyFurnishing? @relation(fields: [furnishing_id], references: [id])
+  furnishing_id   Int?
+  balcony         String              @default("")
+  view            String              @default("")
+  landlord        PropertyLandlord?   @relation(fields: [landlord_id], references: [id])
+  landlord_id     Int?
+  range           Float
+  commission      Float
+  status          String
+  expiration_date DateTime
+  access          String              @default("")
+  has_utilities   Boolean             @default(false)
+  has_facilities  Boolean             @default(false)
+  details         String
+  directions      String
+  images          String[]
+  document        String?
+  agent           Agent?              @relation(fields: [agent_id], references: [id])
+  agent_id        Int?
+
+  utilities  PropertyUtility[] // pivot table
+  facilities PropertyFacility[] // pivot table
+
+  created_at            DateTime                @default(now())
+  updated_at            DateTime                @updatedAt
+  PropertyUtilityPivot  PropertyUtilityPivot[]
+  PropertyFacilityPivot PropertyFacilityPivot[]
+}
+
+// Lookup tables
+model PropertyUtility {
+  id                Int                    @id @default(autoincrement())
+  name              String                 @unique
+  propertyUtilities PropertyUtilityPivot[]
+  Property          Property?              @relation(fields: [propertyId], references: [id])
+  propertyId        Int?
+}
+
+model PropertyUtilityPivot {
+  property_id Int
+  utility_id  Int
+  property    Property        @relation(fields: [property_id], references: [id])
+  utility     PropertyUtility @relation(fields: [utility_id], references: [id])
+
+  @@id([property_id, utility_id])
+}
+
+model PropertyFacility {
+  id                 Int                     @id @default(autoincrement())
+  name               String                  @unique
+  propertyFacilities PropertyFacilityPivot[]
+  Property           Property?               @relation(fields: [propertyId], references: [id])
+  propertyId         Int?
+}
+
+model PropertyFacilityPivot {
+  property_id Int
+  facility_id Int
+  property    Property         @relation(fields: [property_id], references: [id])
+  facility    PropertyFacility @relation(fields: [facility_id], references: [id])
+
+  @@id([property_id, facility_id])
+}
+
+// Autres lookup tables
+model PropertyCategory {
+  id                 Int                  @id @default(autoincrement())
+  name               String               @unique
+  types              PropertyType[]
+  properties         Property[]
+  PropertyFurnishing PropertyFurnishing[]
+}
+
+model PropertyType {
+  id                 Int               @id @default(autoincrement())
+  name               String            @unique
+  propertyCategoryId Int?
+  propertyCategory   PropertyCategory? @relation(fields: [propertyCategoryId], references: [id])
+  layouts            PropertyLayout[]
+  properties         Property[]
+}
+
+model PropertyLayout {
+  id             Int           @id @default(autoincrement())
+  name           String        @unique
+  propertyTypeId Int?
+  propertyType   PropertyType? @relation(fields: [propertyTypeId], references: [id])
+  properties     Property[]
+}
+
+model PropertyLocation {
+  id         Int        @id @default(autoincrement())
+  name       String     @unique
+  longitude  Float
+  latitude   Float
+  properties Property[]
+}
+
+model PropertyLandlord {
+  id                  Int        @id @default(autoincrement())
+  name                String
+  email               String
+  mobile              String
+  alternative_mobile  String?
+  note                String?
+  map_link            String?
+  marketing_agreement Boolean    @default(false)
+  draft_contract      Boolean    @default(false)
+  properties          Property[]
+}
+
+model PropertyFurnishing {
+  id                 Int               @id @default(autoincrement())
+  name               String            @unique
+  propertyCategoryId Int?
+  propertyCategory   PropertyCategory? @relation(fields: [propertyCategoryId], references: [id])
+  properties         Property[]
 }
