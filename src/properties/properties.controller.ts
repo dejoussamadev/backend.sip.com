@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { PropertiesService } from './properties.service';
 import { CreatePropertyDto } from './dto/create-property.dto';
 import { UpdatePropertyDto } from './dto/update-property.dto';
@@ -47,19 +47,19 @@ export class PropertiesController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
+  findOne(@Param('id', ParseIntPipe) id: number) {
     return this.propertiesService.findOne(id);
   }
 
   @Patch(':id')
   @Roles(Role.ADMIN, Role.AGENT)
-  update(@Param('id') id: string, @Body() dto: UpdatePropertyDto) {
+  update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdatePropertyDto) {
     return this.propertiesService.update(id, dto);
   }
 
   @Delete(':id')
   @Roles(Role.ADMIN)
-  remove(@Param('id') id: string) {
+  remove(@Param('id', ParseIntPipe) id: number) {
     return this.propertiesService.remove(id);
   }
 

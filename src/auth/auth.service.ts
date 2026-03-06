@@ -74,9 +74,9 @@ export class AuthService {
     };
   }
 
-  async getProfile(userId: string) {
+  async getProfile(userId: number) {
     const agent = await this.prisma.agent.findUnique({
-      where: { id: userId },
+      where: { id: Number(userId) },
       select: {
         id: true,
         name: true,

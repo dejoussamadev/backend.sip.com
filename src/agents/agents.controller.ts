@@ -7,7 +7,7 @@ import {
   Param,
   Delete,
   UseGuards,
-  ParseUUIDPipe,
+  ParseIntPipe,
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
@@ -57,14 +57,14 @@ export class AgentsController {
 
   // Mon profil
   @Get('profile/me')
-  @Roles(Role.AGENT, Role.ADMIN, Role.MANAGER)
+  @Roles(Role.AGENT, Role.ADMIN)
   getMyProfile(@CurrentUser() user: any) {
     return this.agentsService.findOne(user.id);
   }
 
   // Modifier mon profil
   @Patch('profile/me')
-  @Roles(Role.AGENT, Role.ADMIN, Role.MANAGER)
+  @Roles(Role.AGENT, Role.ADMIN)
   updateMyProfile(
       @CurrentUser() user: any,
       @Body() updateProfileDto: UpdateProfileDto,
@@ -74,7 +74,7 @@ export class AgentsController {
 
   // Changer mon mot de passe
   @Patch('profile/change-password')
-  @Roles(Role.AGENT, Role.ADMIN, Role.MANAGER)
+  @Roles(Role.AGENT, Role.ADMIN)
   changePassword(
       @CurrentUser() user: any,
       @Body() changePasswordDto: ChangePasswordDto,
@@ -87,7 +87,7 @@ export class AgentsController {
   // Détails d'un agent
   @Get(':id')
   @Roles(Role.ADMIN)
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
+  findOne(@Param('id', ParseIntPipe) id: number) {
     return this.agentsService.findOne(id);
   }
 
@@ -95,7 +95,7 @@ export class AgentsController {
   @Patch(':id')
   @Roles(Role.ADMIN)
   update(
-      @Param('id', ParseUUIDPipe) id: string,
+      @Param('id', ParseIntPipe) id: number,
       @Body() updateAgentDto: UpdateAgentDto,
   ) {
     return this.agentsService.update(id, updateAgentDto);
@@ -104,14 +104,14 @@ export class AgentsController {
   // Supprimer un agent
   @Delete(':id')
   @Roles(Role.ADMIN)
-  remove(@Param('id', ParseUUIDPipe) id: string) {
+  remove(@Param('id', ParseIntPipe) id: number) {
     return this.agentsService.remove(id);
   }
 
   // Activer/Désactiver un agent
   @Patch(':id/toggle-active')
   @Roles(Role.ADMIN)
-  toggleActive(@Param('id', ParseUUIDPipe) id: string) {
+  toggleActive(@Param('id', ParseIntPipe) id: number) {
     return this.agentsService.toggleActive(id);
   }
 }

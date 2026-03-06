@@ -134,7 +134,7 @@ export class AgentsService {
         });
     }
 
-    async findOne(id: string) {
+    async findOne(id: number) {
         const agent = await this.prisma.agent.findUnique({
             where: { id },
             select: this.defaultSelect,
@@ -147,7 +147,7 @@ export class AgentsService {
         return agent;
     }
 
-    async update(id: string, updateAgentDto: UpdateAgentDto) {
+    async update(id: number, updateAgentDto: UpdateAgentDto) {
         const existingAgent = await this.prisma.agent.findUnique({
             where: { id },
         });
@@ -191,7 +191,7 @@ export class AgentsService {
         return updatedAgent;
     }
 
-    async remove(id: string) {
+    async remove(id: number) {
         const existingAgent = await this.prisma.agent.findUnique({
             where: { id },
         });
@@ -208,7 +208,7 @@ export class AgentsService {
         return { message: `Agent ${existingAgent.name} supprimé avec succès` };
     }
 
-    async toggleActive(id: string) {
+    async toggleActive(id: number) {
         const agent = await this.prisma.agent.findUnique({
             where: { id },
         });
@@ -234,7 +234,7 @@ export class AgentsService {
 
     // ==================== MÉTHODES AGENT (profil personnel) ====================
 
-    async updateProfile(id: string, updateProfileDto: UpdateProfileDto) {
+    async updateProfile(id: number, updateProfileDto: UpdateProfileDto) {
         const agent = await this.prisma.agent.findUnique({
             where: { id },
         });
@@ -253,7 +253,7 @@ export class AgentsService {
         return updatedAgent;
     }
 
-    async changePassword(id: string, changePasswordDto: ChangePasswordDto) {
+    async changePassword(id: number, changePasswordDto: ChangePasswordDto) {
         const { currentPassword, newPassword, confirmPassword } = changePasswordDto;
 
         // Vérifier que les mots de passe correspondent

@@ -74,83 +74,135 @@ export class PropertiesService {
     this.validateDependencies(dto.category, dto.type, dto.layout);
     this.normalizeRules(dto);
 
-    const refNo = dto.refNo?.trim()
+    const referenceNumber = dto.refNo && dto.refNo.trim()
       ? dto.refNo.trim()
       : await generateRef(this.prisma, dto.category, dto.type);
 
     return this.prisma.property.create({
-      data: { ...dto, refNo },
+      data: {
+        referenceNumber,
+        name: dto.name,
+        shortTerm: dto.shortTerm ?? false,
+        unitNumber: dto.unitNo ?? null,
+        bathrooms: dto.bathrooms ?? 0,
+        size: dto.sizeSqm ?? 0,
+        maidRoom: dto.maidRoom ?? false,
+        balcony: dto.balcony ?? '',
+        view: dto.view ?? '',
+        range: dto.price ?? 0,
+        commission: dto.commissionPct ?? 0,
+        status: 'DRAFT',
+        expirationDate: dto.expiryDate ? new Date(dto.expiryDate as string) : new Date(),
+        access: dto.access ?? '',
+        hasUtilities: dto.utilitiesIncluded ?? false,
+        hasFacilities: dto.facilitiesEnabled ?? false,
+        details: dto.propertyDetails ?? '',
+        directions: dto.propertyNotes ?? '',
+        images: dto.imageUrls ?? [],
+        document: dto.documents?.[0] ?? null,
+        ...(dto.agentId ? { agentId: Number(dto.agentId) } : {}),
+        ...(dto.landlordId ? { landlordId: Number(dto.landlordId) } : {}),
+      },
     });
   }
 
   async findAll(filters: any = {}) {
     const {
-      status, type, category, locationCode, minPrice, maxPrice,
-      bedrooms, bathrooms, agentId, landlordId,
+      status, agentId, landlordId,
+      minPrice, maxPrice, bathrooms,
     } = filters;
     return this.prisma.property.findMany({
       where: {
-        status,
-        type,
-        category,
-        locationCode,
-        agentId,
-        landlordId,
-        price: {
+        status: status || undefined,
+        agentId: agentId ? Number(agentId) : undefined,
+        landlordId: landlordId ? Number(landlordId) : undefined,
+        range: {
           gte: minPrice ? Number(minPrice) : undefined,
           lte: maxPrice ? Number(maxPrice) : undefined,
         },
-        bedrooms: bedrooms ? Number(bedrooms) : undefined,
         bathrooms: bathrooms ? Number(bathrooms) : undefined,
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { updatedAt: 'desc' },
+      include: {
+        category: true,
+        type: true,
+        layout: true,
+        location: true,
+        agent: true,
+        landlord: true,
+      },
     });
   }
 
-  async findOne(id: string) {
-    const property = await this.prisma.property.findUnique({ where: { id } });
+  async findOne(id: number) {
+    const property = await this.prisma.property.findUnique({
+      where: { id },
+      include: {
+        category: true,
+        type: true,
+        layout: true,
+        location: true,
+        furnishing: true,
+        agent: true,
+        landlord: true,
+      },
+    });
     if (!property) throw new NotFoundException('Property not found');
     return property;
   }
 
-  async update(id: string, dto: UpdatePropertyDto) {
+  async update(id: number, dto: UpdatePropertyDto) {
     const current = await this.findOne(id);
-    const category = dto.category ?? (current as any).category;
-    const type = dto.type ?? (current as any).type;
+    const category = dto.category ?? (current as any).category?.name;
+    const type = dto.type ?? (current as any).type?.name;
 
-    this.validateDependencies(category as PropertyCategory, type as PropertyType, dto.layout ?? (current as any).layout);
+    if (category && type) {
+      this.validateDependencies(category as PropertyCategory, type as PropertyType, dto.layout ?? (current as any).layout?.name);
+    }
     this.normalizeRules(dto);
+
+    const updateData: any = {};
+
+    if (dto.name) updateData.name = dto.name;
+    if (dto.bathrooms !== undefined) updateData.bathrooms = dto.bathrooms;
+    if (dto.sizeSqm !== undefined) updateData.size = dto.sizeSqm;
+    if (dto.maidRoom !== undefined) updateData.maidRoom = dto.maidRoom;
+    if (dto.balcony !== undefined) updateData.balcony = dto.balcony;
+    if (dto.view !== undefined) updateData.view = dto.view;
+    if (dto.price !== undefined) updateData.range = dto.price;
+    if (dto.commissionPct !== undefined) updateData.commission = dto.commissionPct;
+    if (dto.access !== undefined) updateData.access = dto.access;
+    if (dto.utilitiesIncluded !== undefined) updateData.hasUtilities = dto.utilitiesIncluded;
+    if (dto.facilitiesEnabled !== undefined) updateData.hasFacilities = dto.facilitiesEnabled;
+    if (dto.propertyDetails !== undefined) updateData.details = dto.propertyDetails;
+    if (dto.propertyNotes !== undefined) updateData.directions = dto.propertyNotes;
+    if (dto.imageUrls !== undefined) updateData.images = dto.imageUrls;
+    if (dto.expiryDate !== undefined) updateData.expirationDate = new Date(dto.expiryDate as string);
+    if (dto.agentId) updateData.agentId = Number(dto.agentId);
+    if (dto.landlordId) updateData.landlordId = Number(dto.landlordId);
 
     return this.prisma.property.update({
       where: { id },
-      data: dto,
+      data: updateData,
     });
   }
 
   async advancedSearch(filters: Record<string, string>) {
     const where: any = {};
 
-    if (filters.category)    where.category    = filters.category;
-    if (filters.type)        where.type        = filters.type;
-    if (filters.layout)      where.layout      = filters.layout;
-    if (filters.location)    where.location    = filters.location;
     if (filters.maidRoom)    where.maidRoom    = filters.maidRoom === 'true' || filters.maidRoom === '1';
-    if (filters.furnishing)  where.furnishing  = filters.furnishing;
-    if (filters.landlord)    where.landlordId  = filters.landlord;
     if (filters.status)      where.status      = filters.status;
-    if (filters.term)        where.term        = filters.term;
     if (filters.bathroom)    where.bathrooms   = Number(filters.bathroom);
     if (filters.balcony)     where.balcony     = filters.balcony;
-    if (filters.facility)    where.facility    = filters.facility;
-    if (filters.utility)     where.utility     = filters.utility;
     if (filters.view)        where.view        = filters.view;
-    if (filters.agent)       where.agentId     = filters.agent;
+    if (filters.agent)       where.agentId     = Number(filters.agent);
+    if (filters.landlord)    where.landlordId  = Number(filters.landlord);
 
-    // Recherche sur les montants
+    // Recherche sur les montants (range)
     if (filters.minAmount || filters.maxAmount) {
-      where.price = {};
-      if (filters.minAmount) where.price.gte = Number(filters.minAmount);
-      if (filters.maxAmount) where.price.lte = Number(filters.maxAmount);
+      where.range = {};
+      if (filters.minAmount) where.range.gte = Number(filters.minAmount);
+      if (filters.maxAmount) where.range.lte = Number(filters.maxAmount);
     }
 
     // Recherche sur la taille des biens
@@ -162,15 +214,21 @@ export class PropertiesService {
 
     return this.prisma.property.findMany({
       where,
-      orderBy: { createdAt: 'desc' },
+      orderBy: { updatedAt: 'desc' },
       take: filters.take ? Number(filters.take) : 100,
       skip: filters.skip ? Number(filters.skip) : 0,
+      include: {
+        category: true,
+        type: true,
+        layout: true,
+        location: true,
+        agent: true,
+        landlord: true,
+      },
     });
   }
 
-
-
-  async remove(id: string) {
+  async remove(id: number) {
     await this.findOne(id);
     return this.prisma.property.delete({ where: { id } });
   }

@@ -52,29 +52,27 @@ async function main() {
         const randomAgent = agents[Math.floor(Math.random() * agents.length)];
         await prisma.property.create({
             data: {
-                reference_number: `PROP${String(i).padStart(6, '0')}`,
+                referenceNumber: `PROP${String(i).padStart(6, '0')}`,
                 name: faker.location.streetAddress(),
                 shortTerm: faker.datatype.boolean(),
-                unit_number: faker.string.numeric(3),
+                unitNumber: faker.string.numeric(3),
                 bathrooms: faker.number.int({ min: 1, max: 5 }),
                 size: faker.number.int({ min: 30, max: 500 }),
-                maid_room: faker.datatype.boolean(),
+                maidRoom: faker.datatype.boolean(),
                 balcony: faker.location.city(),
                 view: faker.location.city(),
                 range: faker.number.float({ min: 1000, max: 10000 }),
                 commission: faker.number.float({ min: 150, max: 1000 }),
-                status: faker.helpers.arrayElement(['Active', 'Inactive']),
-                expiration_date: faker.date.future(),
+                status: faker.helpers.arrayElement(['DRAFT', 'ACTIVE', 'SOLD', 'RENTED', 'EXPIRED']),
+                expirationDate: faker.date.future(),
                 access: faker.location.city(),
-                has_utilities: faker.datatype.boolean(),
-                has_facilities: faker.datatype.boolean(),
+                hasUtilities: faker.datatype.boolean(),
+                hasFacilities: faker.datatype.boolean(),
                 details: faker.lorem.sentence(),
                 directions: faker.location.direction(),
                 images: [faker.image.url()],
-                created_at: faker.date.recent(),
-                updated_at: new Date(),
                 agent: {
-                    connect: { id: randomAgent.id }, // liaison avec un agent random
+                    connect: { id: randomAgent.id },
                 },
             }
         });

@@ -28,7 +28,7 @@ export async function generateRef(prisma: PrismaClient, category: PropertyCatego
   const cat = CAT_CODE[category] || 'XX';
   const typ = TYPE_CODE[type] || 'XX';
   const prefix = `SIP-${typ}${cat}`;
-  const count = await prisma.property.count({ where: { refNo: { startsWith: prefix } } });
+  const count = await prisma.property.count({ where: { referenceNumber: { startsWith: prefix } } });
   const seq = String(count + 1).padStart(3, '0'); // 101, 102...
   return `${prefix}${seq}/`;
 }
