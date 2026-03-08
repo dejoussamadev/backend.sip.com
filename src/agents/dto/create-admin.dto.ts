@@ -26,5 +26,9 @@ export class CreateAdminDto {
 
     @IsString()
     @IsOptional()
+    countryCode?: string;
+
+    @IsString()
+    @IsOptional()
     designation?: string;
 }

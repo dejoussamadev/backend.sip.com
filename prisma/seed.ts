@@ -143,55 +143,19 @@ const CATEGORY_TYPE_RELATIONS: Record<string, string[]> = {
 
 const TYPE_LAYOUT_RELATIONS: Record<string, string[]> = {
   Apartment: ['1BR', '2BR', '3BR', '4BR', 'Studio'],
-  'Compound Villa': [
-    '2BR',
-    '3BR',
-    '4BR',
-    '5BR',
-    '6BR',
-    '7BR',
-    '8BR',
-    '9BR',
-    '10BR+',
-  ],
+  'Compound Villa': ['2BR', '3BR', '4BR', '5BR', '6BR', '7BR', '8BR', '9BR', '10BR+'],
   Land: ['SQM SPACE'],
-  Penthouse: [
-    '1BR',
-    '2BR',
-    '3BR',
-    '4BR',
-    '5BR',
-    '6BR',
-    '7BR',
-    '8BR',
-    '9BR',
-    '10BR+',
-  ],
-  'Standalone Villa': [
-    '1BR',
-    '2BR',
-    '3BR',
-    '4BR',
-    '5BR',
-    '6BR',
-    '7BR',
-    '8BR',
-    '9BR',
-    '10BR+',
-  ],
+  'Labor Camp': ['SQM SPACE', 'Mixed'],
+  'Office Space': ['SQM SPACE', 'Mixed'],
+  'Retail Space': ['SQM SPACE', 'Mixed'],
+  Warehouse: ['SQM SPACE', 'Mixed'],
+  'Whole Building': ['Mixed', 'SQM SPACE'],
+  'Whole Compound': ['2BR', '3BR', '4BR', '5BR', '6BR', '7BR', '8BR', '9BR', '10BR+', 'Mixed'],
+  Penthouse: ['1BR', '2BR', '3BR', '4BR', '5BR', '6BR', '7BR', '8BR', '9BR', '10BR+'],
+  'Standalone Villa': ['1BR', '2BR', '3BR', '4BR', '5BR', '6BR', '7BR', '8BR', '9BR', '10BR+'],
   Townhouse: ['1BR', '2BR', '3BR', '4BR', 'Mixed', 'Studio'],
-  'Whole Compound': [
-    '2BR',
-    '3BR',
-    '4BR',
-    '5BR',
-    '6BR',
-    '7BR',
-    '8BR',
-    '9BR',
-    '10BR+',
-    'Mixed',
-  ],
+  Villa: ['2BR', '3BR', '4BR', '5BR', '6BR', '7BR', '8BR', '9BR', '10BR+'],
+  'Villa Partition': ['1BR', '2BR', '3BR', 'Studio'],
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -402,11 +366,9 @@ async function seedProperties(ctx: {
         CATEGORY_TYPE_RELATIONS[randomCategory.name],
       );
       const randomType = ctx.typeMap[randomTypeName];
-      const validLayoutNames = TYPE_LAYOUT_RELATIONS[randomTypeName] ?? [];
-      const randomLayout =
-        validLayoutNames.length > 0
-          ? ctx.layoutMap[pickRandom(validLayoutNames)]
-          : null;
+      const validLayoutNames = TYPE_LAYOUT_RELATIONS[randomTypeName] ?? ['Mixed'];
+      const layoutName = pickRandom(validLayoutNames);
+      const randomLayout = ctx.layoutMap[layoutName] ?? ctx.layoutMap['Mixed'];
 
       const selectedUtilities = pickRandomSubset(ctx.utilityRecords, 0, 3);
       const selectedFacilities = pickRandomSubset(ctx.facilityRecords, 0, 5);
@@ -446,9 +408,7 @@ async function seedProperties(ctx: {
           document: faker.datatype.boolean() ? faker.internet.url() : null,
           category: { connect: { id: randomCategory.id } },
           type: { connect: { id: randomType.id } },
-          layout: randomLayout
-            ? { connect: { id: randomLayout.id } }
-            : undefined,
+          layout: { connect: { id: randomLayout.id } },
           location: { connect: { id: pickRandom(ctx.locationRecords).id } },
           furnishing: { connect: { id: pickRandom(ctx.furnishingRecords).id } },
           agent: { connect: { id: pickRandom(ctx.agents).id } },

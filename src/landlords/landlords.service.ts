@@ -15,7 +15,12 @@ export class LandlordsService {
 
   // Créer un landlord
   async create(dto: CreateLandlordDto) {
-    const landlord = await this.prisma.landlord.create({ data: dto });
+    const landlord = await this.prisma.landlord.create({
+      data: {
+        ...dto,
+        expiryDate: dto.expiryDate ? new Date(dto.expiryDate) : null,
+      },
+    });
     this.logger.log(`Landlord créé: ${landlord.name} (ID: ${landlord.id})`);
     return landlord;
   }
@@ -58,7 +63,10 @@ export class LandlordsService {
     await this.findOne(id);
     const landlord = await this.prisma.landlord.update({
       where: { id },
-      data: dto,
+      data: {
+        ...dto,
+        expiryDate: dto.expiryDate ? new Date(dto.expiryDate) : undefined,
+      },
     });
     this.logger.log(`Landlord mis à jour: ID ${id}`);
     return landlord;

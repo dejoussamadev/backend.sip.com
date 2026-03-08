@@ -51,26 +51,26 @@ model Property {
   document        String?
 
   // Relations
-  categoryId Int?
-  category   Category? @relation(fields: [categoryId], references: [id])
+  categoryId Int
+  category   Category @relation(fields: [categoryId], references: [id])
 
-  typeId Int?
-  type   Type? @relation(fields: [typeId], references: [id])
+  typeId Int
+  type   Type @relation(fields: [typeId], references: [id])
 
-  layoutId Int?
-  layout   Layout? @relation(fields: [layoutId], references: [id])
+  layoutId Int
+  layout   Layout @relation(fields: [layoutId], references: [id])
 
-  locationId Int?
-  location   Location? @relation(fields: [locationId], references: [id])
+  locationId Int
+  location   Location @relation(fields: [locationId], references: [id])
 
-  furnishingId Int?
-  furnishing   Furnishing? @relation(fields: [furnishingId], references: [id])
+  furnishingId Int
+  furnishing   Furnishing @relation(fields: [furnishingId], references: [id])
 
-  landlordId Int?
-  landlord   Landlord? @relation(fields: [landlordId], references: [id])
+  landlordId Int
+  landlord   Landlord @relation(fields: [landlordId], references: [id])
 
-  agentId Int?
-  agent   Agent? @relation(fields: [agentId], references: [id])
+  agentId Int
+  agent   Agent @relation(fields: [agentId], references: [id])
 
   utilities  PropertyUtility[]
   facilities PropertyFacility[]

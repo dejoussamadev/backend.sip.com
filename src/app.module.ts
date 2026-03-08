@@ -6,10 +6,30 @@ import { AuthModule } from './auth/auth.module';
 import { AgentsModule } from './agents/agents.module';
 import { PropertiesModule } from './properties/properties.module';
 import { LandlordsModule } from './landlords/landlords.module';
+import { CategoriesModule } from './categories/categories.module';
+import { TypesModule } from './types/types.module';
+import { LayoutsModule } from './layouts/layouts.module';
+import { LocationsModule } from './locations/locations.module';
+import { FurnishingsModule } from './furnishings/furnishings.module';
+import { FacilitiesModule } from './facilities/facilities.module';
+import { UtilitiesModule } from './utilities/utilities.module';
 
 
 @Module({
-  imports: [PrismaModule, AuthModule, AgentsModule, PropertiesModule, LandlordsModule],
+  imports: [
+    PrismaModule,
+    AuthModule,
+    AgentsModule,
+    PropertiesModule,
+    LandlordsModule,
+    CategoriesModule,
+    TypesModule,
+    LayoutsModule,
+    LocationsModule,
+    FurnishingsModule,
+    FacilitiesModule,
+    UtilitiesModule,
+  ],
   controllers: [AppController],
   providers: [AppService],
 })

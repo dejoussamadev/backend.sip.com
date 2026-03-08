@@ -87,7 +87,9 @@ export class PropertiesService {
   }
 
   async create(dto: CreatePropertyDto) {
-    this.validateDependencies(dto.category, dto.type, dto.layout);
+    if (dto.category && dto.type) {
+      this.validateDependencies(dto.category, dto.type, dto.layout);
+    }
     this.normalizeRules(dto);
 
     const referenceNumber =
@@ -99,6 +101,14 @@ export class PropertiesService {
             dto.typeId ? Number(dto.typeId) : 0,
           );
 
+    const agentId = dto.agentId ? Number(dto.agentId) : undefined;
+    const landlordId = dto.landlordId ? Number(dto.landlordId) : undefined;
+    const categoryId = dto.categoryId ? Number(dto.categoryId) : undefined;
+    const typeId = dto.typeId ? Number(dto.typeId) : undefined;
+    const layoutId = dto.layoutId ? Number(dto.layoutId) : undefined;
+    const locationId = dto.locationId ? Number(dto.locationId) : undefined;
+    const furnishingId = dto.furnishingId ? Number(dto.furnishingId) : undefined;
+
     return this.prisma.property.create({
       data: {
         referenceNumber,
@@ -109,23 +119,28 @@ export class PropertiesService {
         size: dto.sizeSqm ?? 0,
         maidRoom: dto.maidRoom ?? false,
         balcony: dto.balcony ?? '',
-        view: dto.view ?? undefined,
+        view: dto.view ?? null,
         range: dto.price ?? 0,
         commission: dto.commissionPct ?? 0,
         status: PropertyStatus.PENDING,
         expirationDate: dto.expiryDate
           ? new Date(dto.expiryDate as string)
           : new Date(),
-        access: dto.access ?? undefined,
+        access: dto.access ?? null,
         hasUtilities: dto.utilitiesIncluded ?? false,
         hasFacilities: dto.facilitiesEnabled ?? false,
         details: dto.propertyDetails ?? '',
         directions: dto.propertyNotes ?? '',
         images: dto.imageUrls ?? [],
         document: dto.documents?.[0] ?? null,
-        ...(dto.agentId ? { agentId: Number(dto.agentId) } : {}),
-        ...(dto.landlordId ? { landlordId: Number(dto.landlordId) } : {}),
-      },
+        categoryId: categoryId,
+        typeId: typeId,
+        layoutId: layoutId,
+        locationId: locationId,
+        furnishingId: furnishingId,
+        agentId: agentId,
+        landlordId: landlordId,
+      } as any,
     });
   }
 
@@ -242,6 +257,11 @@ export class PropertiesService {
       updateData.expirationDate = new Date(dto.expiryDate as string);
     if (dto.agentId) updateData.agentId = Number(dto.agentId);
     if (dto.landlordId) updateData.landlordId = Number(dto.landlordId);
+    if (dto.categoryId) updateData.categoryId = Number(dto.categoryId);
+    if (dto.typeId) updateData.typeId = Number(dto.typeId);
+    if (dto.layoutId) updateData.layoutId = Number(dto.layoutId);
+    if (dto.locationId) updateData.locationId = Number(dto.locationId);
+    if (dto.furnishingId) updateData.furnishingId = Number(dto.furnishingId);
 
     return this.prisma.property.update({
       where: { id },

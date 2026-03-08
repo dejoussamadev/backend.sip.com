@@ -11,8 +11,8 @@ export class CreatePropertyDto {
   @IsOptional() @IsBoolean() shortTerm?: boolean;
   @IsOptional() @IsString() unitNo?: string;
 
-  @IsEnum(PropertyCategory) category: PropertyCategory;
-  @IsEnum(PropertyType) type: PropertyType;
+  @IsOptional() @IsEnum(PropertyCategory) category?: PropertyCategory;
+  @IsOptional() @IsEnum(PropertyType) type?: PropertyType;
   @IsOptional() @IsEnum(PropertyLayout) layout?: PropertyLayout;
 
   @IsOptional() @IsInt() bedrooms?: number;
@@ -29,7 +29,7 @@ export class CreatePropertyDto {
   @IsOptional() @IsString() currency?: string;
   @IsOptional() @IsNumber() commissionPct?: number;
 
-  @IsEnum(StatusOption) status: StatusOption;
+  @IsOptional() @IsEnum(StatusOption) status?: StatusOption;
   @IsOptional() expiryDate?: Date | string;
 
   @IsOptional() @IsEnum(PropertyAccess) access?: PropertyAccess;
@@ -74,8 +74,12 @@ export class CreatePropertyDto {
   @IsOptional() @IsArray() imageUrls?: string[];
   @IsOptional() @IsArray() documents?: string[];
 
-  @IsOptional() @IsString() landlordId?: string;
-  @IsOptional() @IsString() agentId?: string;
-  @IsOptional() @IsString() categoryId?: string;
-  @IsOptional() @IsString() typeId?: string;
+  // IDs des relations (envoyés depuis le frontend comme strings ou numbers)
+  @IsOptional() landlordId?: number | string;
+  @IsOptional() agentId?: number | string;
+  @IsOptional() categoryId?: number | string;
+  @IsOptional() typeId?: number | string;
+  @IsOptional() layoutId?: number | string;
+  @IsOptional() locationId?: number | string;
+  @IsOptional() furnishingId?: number | string;
 }
