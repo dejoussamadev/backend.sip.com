@@ -232,4 +232,31 @@ export class PropertiesService {
     await this.findOne(id);
     return this.prisma.property.delete({ where: { id } });
   }
+
+  // Landlords pour le dropdown
+  async getLandlords() {
+    return this.prisma.landlord.findMany({
+      select: {
+        id: true,
+        name: true,
+        mobile: true,
+        countryCode: true,
+      },
+      orderBy: { name: 'asc' },
+    });
+  }
+
+  // Agents pour le dropdown
+  async getAgents() {
+    return this.prisma.agent.findMany({
+      where: { isActive: true },
+      select: {
+        id: true,
+        name: true,
+        agentCode: true,
+        mobile: true,
+      },
+      orderBy: { name: 'asc' },
+    });
+  }
 }

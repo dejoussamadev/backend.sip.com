@@ -105,4 +105,18 @@ export class PropertiesController {
   getFurnishing() {
     return Object.values(FurnishingOption);
   }
+
+  // Liste des landlords pour le dropdown
+  @Get('options/landlords')
+  @Roles(Role.ADMIN, Role.AGENT)
+  getLandlords() {
+    return this.propertiesService.getLandlords();
+  }
+
+  // Liste des agents pour le dropdown
+  @Get('options/agents')
+  @Roles(Role.ADMIN, Role.AGENT)
+  getAgents() {
+    return this.propertiesService.getAgents();
+  }
 }

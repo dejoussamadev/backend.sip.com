@@ -184,15 +184,18 @@ model Location {
 }
 
 model Landlord {
-  id                 Int     @id @default(autoincrement())
-  name               String
-  email              String
-  mobile             String
-  alternativeMobile  String?
-  note               String?
-  mapLink            String?
-  marketingAgreement Boolean @default(false)
-  draftContract      Boolean @default(false)
+  id                     Int       @id @default(autoincrement())
+  name                   String
+  expiryDate             DateTime?
+  email                  String
+  countryCode            String    @default("+974")
+  mobile                 String
+  alternativeCountryCode String?
+  alternativeMobile      String?
+  note                   String?
+  mapLink                String?
+  marketingAgreement     String?
+  draftContract          String?
 
   properties Property[]
 
