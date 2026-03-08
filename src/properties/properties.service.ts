@@ -126,29 +126,60 @@ export class PropertiesService {
   }
 
   async findAll(filters: any = {}) {
-    const { status, agentId, landlordId, minPrice, maxPrice, bathrooms } =
-      filters;
-    return this.prisma.property.findMany({
-      where: {
-        status: status || undefined,
-        agentId: agentId ? Number(agentId) : undefined,
-        landlordId: landlordId ? Number(landlordId) : undefined,
-        range: {
-          gte: minPrice ? Number(minPrice) : undefined,
-          lte: maxPrice ? Number(maxPrice) : undefined,
-        },
-        bathrooms: bathrooms ? Number(bathrooms) : undefined,
+    const {
+      status,
+      agentId,
+      landlordId,
+      minPrice,
+      maxPrice,
+      bathrooms,
+      page = '1',
+      limit = '10',
+    } = filters;
+
+    const take = Number(limit);
+    const skip = (Number(page) - 1) * take;
+
+    const where = {
+      status: status || undefined,
+      agentId: agentId ? Number(agentId) : undefined,
+      landlordId: landlordId ? Number(landlordId) : undefined,
+      range: {
+        gte: minPrice ? Number(minPrice) : undefined,
+        lte: maxPrice ? Number(maxPrice) : undefined,
       },
-      orderBy: { updatedAt: 'desc' },
-      include: {
-        category: true,
-        type: true,
-        layout: true,
-        location: true,
-        agent: true,
-        landlord: true,
+      bathrooms: bathrooms ? Number(bathrooms) : undefined,
+    };
+
+    const include = {
+      category: true,
+      type: true,
+      layout: true,
+      location: true,
+      agent: true,
+      landlord: true,
+    };
+
+    const [data, total] = await Promise.all([
+      this.prisma.property.findMany({
+        where,
+        include,
+        orderBy: { updatedAt: 'desc' },
+        skip,
+        take,
+      }),
+      this.prisma.property.count({ where }),
+    ]);
+
+    return {
+      data,
+      meta: {
+        total,
+        page: Number(page),
+        limit: take,
+        totalPages: Math.ceil(total / take),
       },
-    });
+    };
   }
 
   async findOne(id: number) {

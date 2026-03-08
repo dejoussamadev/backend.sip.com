@@ -42,8 +42,11 @@ export class PropertiesController {
   async filterProperties(@Body() filters: Record<string, any>) {
     return this.propertiesService.advancedSearch(filters);
   }
+
   @Get()
   findAll(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
     @Query('status') status?: string,
     @Query('type') type?: string,
     @Query('category') category?: string,
@@ -56,6 +59,8 @@ export class PropertiesController {
     @Query('landlordId') landlordId?: string,
   ) {
     return this.propertiesService.findAll({
+      page,
+      limit,
       status,
       type,
       category,
