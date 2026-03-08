@@ -1,34 +1,53 @@
 import { PrismaClient } from '@prisma/client';
-import { PropertyCategory, PropertyType } from '../constants/property.enums';
 
-const CAT_CODE: Record<PropertyCategory, string> = {
-  residential_sales: 'RS',
-  residential_leasing: 'RL',
-  commercial_sales: 'CS',
-  commercial_leasing: 'CL',
+// Codes pour les catégories (basés sur le nom en DB)
+const CAT_CODE: Record<string, string> = {
+  'residential sales':    'RS',
+  'residential rentals':  'RL',
+  'commercial sales':     'CS',
+  'commercial rentals':   'CL',
 };
 
-const TYPE_CODE: Record<PropertyType, string> = {
-  land: 'LD',
-  labor_camp: 'LC',
-  office_space: 'OF',
-  retail_space: 'RT',
-  warehouse: 'WH',
-  whole_building: 'WB',
-  whole_compound: 'WC',
-  apartment: 'AP',
-  compound_villa: 'CV',
-  penthouse: 'PH',
-  stand_alone_villa: 'SA',
-  townhouse: 'TH',
-  villa: 'VI',
+// Codes pour les types (basés sur le nom en DB)
+const TYPE_CODE: Record<string, string> = {
+  'apartment':          'A',
+  'compound villa':     'CV',
+  'stand alone villa':  'SA',
+  'villa':              'V',
+  'penthouse':          'PH',
+  'townhouse':          'TH',
+  'office':             'OF',
+  'shop':               'SH',
+  'warehouse':          'WH',
+  'whole building':     'WB',
+  'labor camp':         'LC',
+  'land':               'LD',
 };
 
-export async function generateRef(prisma: PrismaClient, category: PropertyCategory, type: PropertyType) {
-  const cat = CAT_CODE[category] || 'XX';
-  const typ = TYPE_CODE[type] || 'XX';
-  const prefix = `SIP-${typ}${cat}`;
-  const count = await prisma.property.count({ where: { referenceNumber: { startsWith: prefix } } });
-  const seq = String(count + 1).padStart(3, '0'); // 101, 102...
+export async function generateRef(
+  prisma: PrismaClient,
+  categoryId: number,
+  typeId: number,
+): Promise<string> {
+  // Récupérer les noms depuis la DB
+  const [category, type] = await Promise.all([
+    prisma.category.findUnique({ where: { id: categoryId } }),
+    prisma.type.findUnique({ where: { id: typeId } }),
+  ]);
+
+  const catName = category?.name?.toLowerCase() ?? '';
+  const typeName = type?.name?.toLowerCase() ?? '';
+
+  const catCode = CAT_CODE[catName] ?? 'XX';
+  const typeCode = TYPE_CODE[typeName] ?? 'XX';
+
+  const prefix = `SIP-${typeCode}${catCode}`;
+
+  // Compter les properties existantes avec ce préfixe pour générer le numéro suivant
+  const count = await prisma.property.count({
+    where: { referenceNumber: { startsWith: prefix } },
+  });
+
+  const seq = String(100 + count + 1); // commence à 101, 102...
   return `${prefix}${seq}/`;
 }

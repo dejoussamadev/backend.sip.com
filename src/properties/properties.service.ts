@@ -93,7 +93,11 @@ export class PropertiesService {
     const referenceNumber =
       dto.refNo && dto.refNo.trim()
         ? dto.refNo.trim()
-        : await generateRef(this.prisma, dto.category, dto.type);
+        : await generateRef(
+            this.prisma,
+            dto.categoryId ? Number(dto.categoryId) : 0,
+            dto.typeId ? Number(dto.typeId) : 0,
+          );
 
     return this.prisma.property.create({
       data: {

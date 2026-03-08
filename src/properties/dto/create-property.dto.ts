@@ -76,4 +76,6 @@ export class CreatePropertyDto {
 
   @IsOptional() @IsString() landlordId?: string;
   @IsOptional() @IsString() agentId?: string;
+  @IsOptional() @IsString() categoryId?: string;
+  @IsOptional() @IsString() typeId?: string;
 }

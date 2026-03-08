@@ -1,3 +1,0 @@
--- AlterTable
-ALTER TABLE "properties" ALTER COLUMN "view" DROP NOT NULL,
-ALTER COLUMN "access" DROP NOT NULL;
