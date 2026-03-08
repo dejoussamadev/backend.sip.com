@@ -1,0 +1,32 @@
+model Category {
+  id   Int    @id @default(autoincrement())
+  name String @unique
+
+  properties  Property[]
+  furnishings CategoryFurnishing[]
+  types       CategoryType[]
+
+  @@map("categories")
+}
+
+model CategoryFurnishing {
+  categoryId   Int
+  furnishingId Int
+
+  category   Category   @relation(fields: [categoryId], references: [id])
+  furnishing Furnishing @relation(fields: [furnishingId], references: [id])
+
+  @@id([categoryId, furnishingId])
+  @@map("category_furnishings")
+}
+
+model CategoryType {
+  categoryId Int
+  typeId     Int
+
+  category Category @relation(fields: [categoryId], references: [id])
+  type     Type     @relation(fields: [typeId], references: [id])
+
+  @@id([categoryId, typeId])
+  @@map("category_types")
+}

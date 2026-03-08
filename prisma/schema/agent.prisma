@@ -1,0 +1,26 @@
+enum Role {
+  AGENT
+  ADMIN
+}
+
+model Agent {
+  id                  Int      @id @default(autoincrement())
+  name                String
+  agentCode           String   @unique
+  email               String   @unique
+  password            String
+  mobile              String
+  countryCode         String   @default("+974")
+  designation         String?
+  photo               String?
+  bookmarkLimit       Int      @default(50)
+  onlinePropertyLimit Int      @default(0)
+  role                Role     @default(AGENT)
+  isActive            Boolean  @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  properties Property[]
+
+  @@map("agents")
+}

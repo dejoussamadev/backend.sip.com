@@ -1,0 +1,18 @@
+model Utility {
+  id         Int               @id @default(autoincrement())
+  name       String            @unique
+  properties PropertyUtility[]
+
+  @@map("utilities")
+}
+
+model PropertyUtility {
+  propertyId Int
+  utilityId  Int
+
+  property Property @relation(fields: [propertyId], references: [id])
+  utility  Utility  @relation(fields: [utilityId], references: [id])
+
+  @@id([propertyId, utilityId])
+  @@map("property_utilities")
+}

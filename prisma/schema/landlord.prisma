@@ -1,0 +1,15 @@
+model Landlord {
+  id                 Int     @id @default(autoincrement())
+  name               String
+  email              String
+  mobile             String
+  alternativeMobile  String?
+  note               String?
+  mapLink            String?
+  marketingAgreement Boolean @default(false)
+  draftContract      Boolean @default(false)
+
+  properties Property[]
+
+  @@map("landlords")
+}
