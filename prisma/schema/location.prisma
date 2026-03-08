@@ -1,0 +1,10 @@
+model Location {
+  id        Int    @id @default(autoincrement())
+  name      String @unique
+  longitude Float
+  latitude  Float
+
+  properties Property[]
+
+  @@map("locations")
+}

@@ -1,24 +1,40 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreatePropertyDto } from './dto/create-property.dto';
 import { UpdatePropertyDto } from './dto/update-property.dto';
-import { CATEGORY_TO_TYPES, TYPE_TO_LAYOUTS } from './constants/property.options';
+import {
+  CATEGORY_TO_TYPES,
+  TYPE_TO_LAYOUTS,
+} from './constants/property.options';
 import { generateRef } from './utils/ref.generator';
 import { PropertyCategory, PropertyType } from './constants/property.enums';
+import { PropertyStatus } from '@prisma/client';
 
 @Injectable()
 export class PropertiesService {
   constructor(private prisma: PrismaService) {}
 
-  private validateDependencies(category: PropertyCategory, type: PropertyType, layout?: string) {
+  private validateDependencies(
+    category: PropertyCategory,
+    type: PropertyType,
+    layout?: string,
+  ) {
     const allowedTypes = CATEGORY_TO_TYPES[category];
     if (allowedTypes && !allowedTypes.includes(type)) {
-      throw new BadRequestException(`Type ${type} not allowed for category ${category}`);
+      throw new BadRequestException(
+        `Type ${type} not allowed for category ${category}`,
+      );
     }
     if (layout) {
       const allowedLayouts = TYPE_TO_LAYOUTS[type];
       if (allowedLayouts && !allowedLayouts.includes(layout as any)) {
-        throw new BadRequestException(`Layout ${layout} not allowed for type ${type}`);
+        throw new BadRequestException(
+          `Layout ${layout} not allowed for type ${type}`,
+        );
       }
     }
   }
@@ -74,9 +90,10 @@ export class PropertiesService {
     this.validateDependencies(dto.category, dto.type, dto.layout);
     this.normalizeRules(dto);
 
-    const referenceNumber = dto.refNo && dto.refNo.trim()
-      ? dto.refNo.trim()
-      : await generateRef(this.prisma, dto.category, dto.type);
+    const referenceNumber =
+      dto.refNo && dto.refNo.trim()
+        ? dto.refNo.trim()
+        : await generateRef(this.prisma, dto.category, dto.type);
 
     return this.prisma.property.create({
       data: {
@@ -88,12 +105,14 @@ export class PropertiesService {
         size: dto.sizeSqm ?? 0,
         maidRoom: dto.maidRoom ?? false,
         balcony: dto.balcony ?? '',
-        view: dto.view ?? '',
+        view: dto.view ?? undefined,
         range: dto.price ?? 0,
         commission: dto.commissionPct ?? 0,
-        status: 'DRAFT',
-        expirationDate: dto.expiryDate ? new Date(dto.expiryDate as string) : new Date(),
-        access: dto.access ?? '',
+        status: PropertyStatus.PENDING,
+        expirationDate: dto.expiryDate
+          ? new Date(dto.expiryDate as string)
+          : new Date(),
+        access: dto.access ?? undefined,
         hasUtilities: dto.utilitiesIncluded ?? false,
         hasFacilities: dto.facilitiesEnabled ?? false,
         details: dto.propertyDetails ?? '',
@@ -107,10 +126,8 @@ export class PropertiesService {
   }
 
   async findAll(filters: any = {}) {
-    const {
-      status, agentId, landlordId,
-      minPrice, maxPrice, bathrooms,
-    } = filters;
+    const { status, agentId, landlordId, minPrice, maxPrice, bathrooms } =
+      filters;
     return this.prisma.property.findMany({
       where: {
         status: status || undefined,
@@ -157,7 +174,11 @@ export class PropertiesService {
     const type = dto.type ?? (current as any).type?.name;
 
     if (category && type) {
-      this.validateDependencies(category as PropertyCategory, type as PropertyType, dto.layout ?? (current as any).layout?.name);
+      this.validateDependencies(
+        category as PropertyCategory,
+        type as PropertyType,
+        dto.layout ?? (current as any).layout?.name,
+      );
     }
     this.normalizeRules(dto);
 
@@ -170,14 +191,20 @@ export class PropertiesService {
     if (dto.balcony !== undefined) updateData.balcony = dto.balcony;
     if (dto.view !== undefined) updateData.view = dto.view;
     if (dto.price !== undefined) updateData.range = dto.price;
-    if (dto.commissionPct !== undefined) updateData.commission = dto.commissionPct;
+    if (dto.commissionPct !== undefined)
+      updateData.commission = dto.commissionPct;
     if (dto.access !== undefined) updateData.access = dto.access;
-    if (dto.utilitiesIncluded !== undefined) updateData.hasUtilities = dto.utilitiesIncluded;
-    if (dto.facilitiesEnabled !== undefined) updateData.hasFacilities = dto.facilitiesEnabled;
-    if (dto.propertyDetails !== undefined) updateData.details = dto.propertyDetails;
-    if (dto.propertyNotes !== undefined) updateData.directions = dto.propertyNotes;
+    if (dto.utilitiesIncluded !== undefined)
+      updateData.hasUtilities = dto.utilitiesIncluded;
+    if (dto.facilitiesEnabled !== undefined)
+      updateData.hasFacilities = dto.facilitiesEnabled;
+    if (dto.propertyDetails !== undefined)
+      updateData.details = dto.propertyDetails;
+    if (dto.propertyNotes !== undefined)
+      updateData.directions = dto.propertyNotes;
     if (dto.imageUrls !== undefined) updateData.images = dto.imageUrls;
-    if (dto.expiryDate !== undefined) updateData.expirationDate = new Date(dto.expiryDate as string);
+    if (dto.expiryDate !== undefined)
+      updateData.expirationDate = new Date(dto.expiryDate as string);
     if (dto.agentId) updateData.agentId = Number(dto.agentId);
     if (dto.landlordId) updateData.landlordId = Number(dto.landlordId);
 
@@ -190,13 +217,14 @@ export class PropertiesService {
   async advancedSearch(filters: Record<string, string>) {
     const where: any = {};
 
-    if (filters.maidRoom)    where.maidRoom    = filters.maidRoom === 'true' || filters.maidRoom === '1';
-    if (filters.status)      where.status      = filters.status;
-    if (filters.bathroom)    where.bathrooms   = Number(filters.bathroom);
-    if (filters.balcony)     where.balcony     = filters.balcony;
-    if (filters.view)        where.view        = filters.view;
-    if (filters.agent)       where.agentId     = Number(filters.agent);
-    if (filters.landlord)    where.landlordId  = Number(filters.landlord);
+    if (filters.maidRoom)
+      where.maidRoom = filters.maidRoom === 'true' || filters.maidRoom === '1';
+    if (filters.status) where.status = filters.status;
+    if (filters.bathroom) where.bathrooms = Number(filters.bathroom);
+    if (filters.balcony) where.balcony = filters.balcony;
+    if (filters.view) where.view = filters.view;
+    if (filters.agent) where.agentId = Number(filters.agent);
+    if (filters.landlord) where.landlordId = Number(filters.landlord);
 
     // Recherche sur les montants (range)
     if (filters.minAmount || filters.maxAmount) {

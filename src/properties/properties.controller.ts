@@ -1,18 +1,32 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  ParseIntPipe,
+  Patch,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { PropertiesService } from './properties.service';
 import { CreatePropertyDto } from './dto/create-property.dto';
 import { UpdatePropertyDto } from './dto/update-property.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
-import { CATEGORY_TO_TYPES, TYPE_TO_LAYOUTS } from './constants/property.options';
 import {
-  BalconyOption, ViewOption, StatusOption, AccessOption, FurnishingOption,
+  CATEGORY_TO_TYPES,
+  TYPE_TO_LAYOUTS,
+} from './constants/property.options';
+import {
+  BalconyOption,
+  StatusOption,
+  AccessOption,
+  FurnishingOption,
 } from './constants/property.enums';
-import { Role } from '@prisma/client'; // <-- import l’énum Prisma
-
-
-
+import { PropertyView, Role } from '@prisma/client';
 
 @Controller('properties')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -30,19 +44,28 @@ export class PropertiesController {
   }
   @Get()
   findAll(
-      @Query('status') status?: string,
-      @Query('type') type?: string,
-      @Query('category') category?: string,
-      @Query('locationCode') locationCode?: string,
-      @Query('minPrice') minPrice?: string,
-      @Query('maxPrice') maxPrice?: string,
-      @Query('bedrooms') bedrooms?: string,
-      @Query('bathrooms') bathrooms?: string,
-      @Query('agentId') agentId?: string,
-      @Query('landlordId') landlordId?: string,
+    @Query('status') status?: string,
+    @Query('type') type?: string,
+    @Query('category') category?: string,
+    @Query('locationCode') locationCode?: string,
+    @Query('minPrice') minPrice?: string,
+    @Query('maxPrice') maxPrice?: string,
+    @Query('bedrooms') bedrooms?: string,
+    @Query('bathrooms') bathrooms?: string,
+    @Query('agentId') agentId?: string,
+    @Query('landlordId') landlordId?: string,
   ) {
     return this.propertiesService.findAll({
-      status, type, category, locationCode, minPrice, maxPrice, bedrooms, bathrooms, agentId, landlordId,
+      status,
+      type,
+      category,
+      locationCode,
+      minPrice,
+      maxPrice,
+      bedrooms,
+      bathrooms,
+      agentId,
+      landlordId,
     });
   }
 
@@ -53,7 +76,10 @@ export class PropertiesController {
 
   @Patch(':id')
   @Roles(Role.ADMIN, Role.AGENT)
-  update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdatePropertyDto) {
+  update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdatePropertyDto,
+  ) {
     return this.propertiesService.update(id, dto);
   }
 
@@ -70,7 +96,8 @@ export class PropertiesController {
 
   @Get('options/types')
   getTypes(@Query('category') category?: string) {
-    if (category && CATEGORY_TO_TYPES[category]) return CATEGORY_TO_TYPES[category];
+    if (category && CATEGORY_TO_TYPES[category])
+      return CATEGORY_TO_TYPES[category];
     return Array.from(new Set(Object.values(CATEGORY_TO_TYPES).flat()));
   }
 
@@ -87,7 +114,7 @@ export class PropertiesController {
 
   @Get('options/view')
   getView() {
-    return Object.values(ViewOption);
+    return Object.values(PropertyView);
   }
 
   @Get('options/status')
@@ -99,7 +126,6 @@ export class PropertiesController {
   getAccess() {
     return Object.values(AccessOption);
   }
-
 
   @Get('options/furnishing')
   getFurnishing() {

@@ -1,0 +1,18 @@
+model Facility {
+  id         Int                @id @default(autoincrement())
+  name       String             @unique
+  properties PropertyFacility[]
+
+  @@map("facilities")
+}
+
+model PropertyFacility {
+  propertyId Int
+  facilityId Int
+
+  property Property @relation(fields: [propertyId], references: [id])
+  facility Facility @relation(fields: [facilityId], references: [id])
+
+  @@id([propertyId, facilityId])
+  @@map("property_facilities")
+}

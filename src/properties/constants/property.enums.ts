@@ -45,33 +45,33 @@ export enum BalconyOption {
   BALCONY_AND_TERRACE = 'balcony_and_terrace',
 }
 
-export enum ViewOption {
-  BEACH = 'beach',
-  CITY = 'city',
-  COMMUNITY = 'community',
-  FACILITIES = 'facilities',
-  FULL_SEA = 'full_sea',
-  MARINA = 'marina',
-  MIXED = 'mixed',
-  PARTIAL_MARINA = 'partial_marina',
-  PARTIAL_SEA = 'partial_sea',
-}
+/* export enum ViewOption {
+  BEACH,
+  CITY,
+  COMMUNITY,
+  FACILITIES,
+  FULL_SEA,
+  MARINA,
+  MIXED,
+  PARTIAL_MARINA,
+  PARTIAL_SEA,
+} */
 
 export enum StatusOption {
-  AVAILABLE = 'available',
-  PENDING = 'pending',
-  NOT_AVAILABLE = 'not_available',
-  ON_HOLD = 'on_hold',
-  UPCOMING = 'upcoming',
-  ARCHIVED = 'archived',
-  TRASH = 'trash',
-  REJECTED = 'rejected',
+  AVAILABLE,
+  PENDING,
+  NOT_AVAILABLE,
+  ON_HOLD,
+  UPCOMING,
+  ARCHIVED,
+  TRASH,
+  REJECTED,
 }
 
 export enum AccessOption {
-  CALL_APPOINTEMENT = 'call_appointement',
-  DIRECT_APPOINTEMENT = 'direct_appointement',
-  EMAIL_APPOINTEMENT = 'email_appointement',
+  CALL_APPOINTMENT,
+  DIRECT_APPOINTMENT,
+  EMAIL_APPOINTMENT,
 }
 
 export enum FurnishingOption {

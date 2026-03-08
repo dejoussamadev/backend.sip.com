@@ -1,0 +1,9 @@
+model Layout {
+  id   Int    @id @default(autoincrement())
+  name String @unique
+
+  types      TypeLayout[]
+  properties Property[]
+
+  @@map("layouts")
+}

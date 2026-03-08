@@ -1,8 +1,9 @@
 import { IsString, IsOptional, IsNumber, IsInt, IsBoolean, IsArray, IsEnum } from 'class-validator';
 import {
   PropertyCategory, PropertyType, PropertyLayout,
-  BalconyOption, ViewOption, StatusOption, AccessOption, FurnishingOption,
+  BalconyOption, StatusOption, AccessOption, FurnishingOption,
 } from '../constants/property.enums';
+import { PropertyAccess, PropertyView } from '@prisma/client';
 
 export class CreatePropertyDto {
   @IsOptional() @IsString() refNo?: string; // généré si absent
@@ -19,7 +20,7 @@ export class CreatePropertyDto {
   @IsOptional() @IsBoolean() maidRoom?: boolean;
 
   @IsOptional() @IsEnum(BalconyOption) balcony?: BalconyOption;
-  @IsOptional() @IsEnum(ViewOption) view?: ViewOption;
+  @IsOptional() @IsEnum(PropertyView) view?: PropertyView;
 
   @IsOptional() @IsEnum(FurnishingOption) furnishing?: FurnishingOption;
   @IsOptional() @IsNumber() sizeSqm?: number;
@@ -31,7 +32,7 @@ export class CreatePropertyDto {
   @IsEnum(StatusOption) status: StatusOption;
   @IsOptional() expiryDate?: Date | string;
 
-  @IsOptional() @IsEnum(AccessOption) access?: AccessOption;
+  @IsOptional() @IsEnum(PropertyAccess) access?: PropertyAccess;
   @IsOptional() @IsBoolean() utilitiesIncluded?: boolean;
   @IsOptional() @IsBoolean() utilitiesWaterElec?: boolean;
   @IsOptional() @IsBoolean() utilitiesInternet?: boolean;
