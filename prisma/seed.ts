@@ -363,14 +363,17 @@ async function seedLandlords(): Promise<NamedRecord[]> {
         data: {
           name: faker.person.fullName(),
           email: faker.internet.email(),
+          countryCode: '+974',
           mobile: faker.phone.number(),
+          expiryDate: faker.datatype.boolean() ? faker.date.future() : null,
+          alternativeCountryCode: faker.datatype.boolean() ? '+974' : null,
           alternativeMobile: faker.datatype.boolean()
             ? faker.phone.number()
             : null,
           note: faker.datatype.boolean() ? faker.lorem.sentence() : null,
           mapLink: faker.datatype.boolean() ? faker.internet.url() : null,
-          marketingAgreement: faker.datatype.boolean(),
-          draftContract: faker.datatype.boolean(),
+          marketingAgreement: faker.datatype.boolean() ? 'Yes' : 'No',
+          draftContract: faker.datatype.boolean() ? 'Yes' : 'No',
         },
       }),
     ),
