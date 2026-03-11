@@ -83,6 +83,12 @@ export class AgentsController {
   }
 
   // ==================== ROUTES ADMIN (par ID) ====================
+// Récupérer les 20 premiers agents (id + nom)
+  @Get('list/simple')
+  @Roles(Role.ADMIN)
+  getSimpleList() {
+    return this.agentsService.getSimpleList();
+  }
 
   // Détails d'un agent
   @Get(':id')

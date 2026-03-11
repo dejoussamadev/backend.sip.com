@@ -1,0 +1,16 @@
+enum NotificationType {
+  PROPERTY_CREATED
+  PROPERTY_UPDATED
+  AGENT_CREATED
+  AGENT_UPDATED
+}
+
+model Notification {
+  id        Int              @id @default(autoincrement())
+  type      NotificationType
+  message   String
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  @@map("notifications")
+}

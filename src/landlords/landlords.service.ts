@@ -71,6 +71,18 @@ export class LandlordsService {
     this.logger.log(`Landlord mis à jour: ID ${id}`);
     return landlord;
   }
+// Récupérer les 20 premiers landlords (id + nom) - ADMIN seulement
+  async getSimpleList() {
+    return this.prisma.landlord.findMany({
+      select: {
+        id: true,
+        name: true,
+      },
+      orderBy: { name: 'asc' },
+      take: 20,
+    });
+  }
+
 
   // Supprimer un landlord
   async remove(id: number) {

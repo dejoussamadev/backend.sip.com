@@ -13,6 +13,7 @@ import { LocationsModule } from './locations/locations.module';
 import { FurnishingsModule } from './furnishings/furnishings.module';
 import { FacilitiesModule } from './facilities/facilities.module';
 import { UtilitiesModule } from './utilities/utilities.module';
+import { NotificationsModule } from './notifications/notifications.module';
 
 
 @Module({
@@ -29,6 +30,7 @@ import { UtilitiesModule } from './utilities/utilities.module';
     FurnishingsModule,
     FacilitiesModule,
     UtilitiesModule,
+    NotificationsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

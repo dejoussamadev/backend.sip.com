@@ -252,6 +252,18 @@ export class AgentsService {
         this.logger.log(`Profil modifié par l'agent: ${updatedAgent.email}`);
         return updatedAgent;
     }
+// Récupérer les 20 premiers agents (id + nom) - ADMIN seulement
+    async getSimpleList() {
+        return this.prisma.agent.findMany({
+            where: { isActive: true },
+            select: {
+                id: true,
+                name: true,
+            },
+            orderBy: { name: 'asc' },
+            take: 20,
+        });
+    }
 
     async changePassword(id: number, changePasswordDto: ChangePasswordDto) {
         const { currentPassword, newPassword, confirmPassword } = changePasswordDto;

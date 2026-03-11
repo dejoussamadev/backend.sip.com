@@ -13,10 +13,14 @@ import {
 import { generateRef } from './utils/ref.generator';
 import { PropertyCategory, PropertyType } from './constants/property.enums';
 import { PropertyStatus } from '@prisma/client';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class PropertiesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private notificationsService: NotificationsService,
+  ) {}
 
   private validateDependencies(
     category: PropertyCategory,
@@ -86,7 +90,7 @@ export class PropertiesService {
     }
   }
 
-  async create(dto: CreatePropertyDto) {
+  async create(dto: CreatePropertyDto, agentName: string = 'Unknown') {
     if (dto.category && dto.type) {
       this.validateDependencies(dto.category, dto.type, dto.layout);
     }
@@ -109,7 +113,7 @@ export class PropertiesService {
     const locationId = dto.locationId ? Number(dto.locationId) : undefined;
     const furnishingId = dto.furnishingId ? Number(dto.furnishingId) : undefined;
 
-    return this.prisma.property.create({
+    const property = await this.prisma.property.create({
       data: {
         referenceNumber,
         name: dto.name,
@@ -142,6 +146,11 @@ export class PropertiesService {
         landlordId: landlordId,
       } as any,
     });
+
+    // Déclencher la notification
+    await this.notificationsService.notifyPropertyCreated(property.referenceNumber, agentName);
+
+    return property;
   }
 
   async findAll(filters: any = {}) {
@@ -218,7 +227,7 @@ export class PropertiesService {
     return property;
   }
 
-  async update(id: number, dto: UpdatePropertyDto) {
+  async update(id: number, dto: UpdatePropertyDto, agentName: string = 'Unknown') {
     const current = await this.findOne(id);
     const category = dto.category ?? (current as any).category?.name;
     const type = dto.type ?? (current as any).type?.name;
@@ -263,10 +272,15 @@ export class PropertiesService {
     if (dto.locationId) updateData.locationId = Number(dto.locationId);
     if (dto.furnishingId) updateData.furnishingId = Number(dto.furnishingId);
 
-    return this.prisma.property.update({
+    const updated = await this.prisma.property.update({
       where: { id },
       data: updateData,
     });
+
+    // Déclencher la notification
+    await this.notificationsService.notifyPropertyUpdated(updated.referenceNumber, agentName);
+
+    return updated;
   }
 
   async advancedSearch(filters: Record<string, string>) {

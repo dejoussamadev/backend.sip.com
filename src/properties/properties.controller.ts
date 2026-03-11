@@ -8,8 +8,10 @@ import {
   Patch,
   Post,
   Query,
+  Req,
   UseGuards,
 } from '@nestjs/common';
+import type { Request } from 'express';
 import { PropertiesService } from './properties.service';
 import { CreatePropertyDto } from './dto/create-property.dto';
 import { UpdatePropertyDto } from './dto/update-property.dto';
@@ -35,8 +37,9 @@ export class PropertiesController {
 
   @Post()
   @Roles(Role.ADMIN, Role.AGENT)
-  create(@Body() dto: CreatePropertyDto) {
-    return this.propertiesService.create(dto);
+  create(@Body() dto: CreatePropertyDto, @Req() req: Request) {
+    const agentName = (req.user as any)?.name ?? 'Unknown';
+    return this.propertiesService.create(dto, agentName);
   }
   @Post('filter')
   async filterProperties(@Body() filters: Record<string, any>) {
@@ -84,8 +87,10 @@ export class PropertiesController {
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdatePropertyDto,
+    @Req() req: Request,
   ) {
-    return this.propertiesService.update(id, dto);
+    const agentName = (req.user as any)?.name ?? 'Unknown';
+    return this.propertiesService.update(id, dto, agentName);
   }
 
   @Delete(':id')

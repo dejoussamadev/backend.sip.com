@@ -29,4 +29,12 @@ export class AuthController {
     async getProfile(@CurrentUser() user: any) {
         return this.authService.getProfile(user.id);
     }
+
+    // Route POST /auth/logout (protégée)
+    @Post('logout')
+    @UseGuards(JwtAuthGuard)
+    @HttpCode(HttpStatus.OK)
+    async logout(@CurrentUser() user: any) {
+        return this.authService.logout(user.id, user.email);
+    }
 }

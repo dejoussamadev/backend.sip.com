@@ -74,6 +74,12 @@ export class LandlordsController {
   findAll() {
     return this.landlordsService.findAll();
   }
+// Récupérer les 20 premiers landlords (id + nom)
+  @Get('list/simple')
+  @Roles(Role.ADMIN)
+  getSimpleList() {
+    return this.landlordsService.getSimpleList();
+  }
 
   // Trouver un landlord par ID
   @Get(':id')

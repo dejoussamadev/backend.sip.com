@@ -101,4 +101,12 @@ export class AuthService {
 
     return agent;
   }
+
+  async logout(userId: number, userEmail: string) {
+    this.logger.log(`Déconnexion de l'utilisateur: ${userEmail} (ID: ${userId})`);
+    return {
+      message: 'Déconnexion réussie',
+      success: true,
+    };
+  }
 }
