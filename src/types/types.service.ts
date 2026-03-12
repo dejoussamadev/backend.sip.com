@@ -13,7 +13,10 @@ export class TypesService {
 
   findAll() {
     return this.prisma.type.findMany({
-      include: { categories: { include: { category: true } }, layouts: { include: { layout: true } } },
+      include: {
+        categories: { include: { category: true } },
+        layouts: { include: { layout: true } },
+      },
       orderBy: { name: 'asc' },
     });
   }
@@ -21,7 +24,10 @@ export class TypesService {
   async findOne(id: number) {
     const type = await this.prisma.type.findUnique({
       where: { id },
-      include: { categories: { include: { category: true } }, layouts: { include: { layout: true } } },
+      include: {
+        categories: { include: { category: true } },
+        layouts: { include: { layout: true } },
+      },
     });
     if (!type) throw new NotFoundException('Type not found');
     return type;
@@ -42,7 +48,13 @@ export class TypesService {
     await this.findOne(id);
     return this.prisma.property.findMany({
       where: { typeId: id },
-      include: { category: true, layout: true, location: true, agent: true, landlord: true },
+      include: {
+        category: true,
+        layout: true,
+        location: true,
+        agent: true,
+        landlord: true,
+      },
       orderBy: { updatedAt: 'desc' },
     });
   }
@@ -58,12 +70,19 @@ export class TypesService {
   }
 
   // Récupérer les categories d'un type
-  async findCategoriesByType(id: number) {
-    await this.findOne(id);
+  async findTypesByCategory(id: number) {
+    console.log('hello');
     const categoryTypes = await this.prisma.categoryType.findMany({
-      where: { typeId: id },
-      include: { category: true },
+      where: { categoryId: id },
+      include: { type: true },
     });
-    return categoryTypes.map((ct) => ct.category);
+    console.log(categoryTypes);
+    return categoryTypes.map((ct) => ct.type);
+  }
+
+  async countTypes() {
+    return {
+      total: await this.prisma.type.count(),
+    };
   }
 }

@@ -28,6 +28,12 @@ export class TypesController {
     return this.typesService.findAll();
   }
 
+  @Get('count')
+  @HttpCode(HttpStatus.OK)
+  countTypes() {
+    return this.typesService.countTypes();
+  }
+
   @Get(':id')
   @Roles(Role.ADMIN, Role.AGENT)
   findOne(@Param('id', ParseIntPipe) id: number) {
@@ -62,9 +68,10 @@ export class TypesController {
   }
 
   // GET /types/:id/categories
-  @Get(':id/categories')
+  @Get('by-category/:id')
   @Roles(Role.ADMIN, Role.AGENT)
   findCategories(@Param('id', ParseIntPipe) id: number) {
-    return this.typesService.findCategoriesByType(id);
+    console.log('TRAH');
+    return this.typesService.findTypesByCategory(id);
   }
 }

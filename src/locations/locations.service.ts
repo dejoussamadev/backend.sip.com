@@ -40,4 +40,10 @@ export class LocationsService {
       orderBy: { updatedAt: 'desc' },
     });
   }
+
+  async countLocations() {
+    return {
+      total: await this.prisma.location.count(),
+    };
+  }
 }

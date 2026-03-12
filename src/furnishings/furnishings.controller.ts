@@ -28,6 +28,12 @@ export class FurnishingsController {
     return this.furnishingsService.findAll();
   }
 
+  @Get('count')
+  @HttpCode(HttpStatus.OK)
+  countFurnishings() {
+    return this.furnishingsService.countFurnishings();
+  }
+
   @Get(':id')
   @Roles(Role.ADMIN, Role.AGENT)
   findOne(@Param('id', ParseIntPipe) id: number) {
@@ -36,7 +42,10 @@ export class FurnishingsController {
 
   @Patch(':id')
   @Roles(Role.ADMIN)
-  update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateFurnishingDto) {
+  update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateFurnishingDto,
+  ) {
     return this.furnishingsService.update(id, dto);
   }
 
@@ -55,9 +64,9 @@ export class FurnishingsController {
   }
 
   // GET /furnishings/:id/categories
-  @Get(':id/categories')
+  @Get('by-category/:id')
   @Roles(Role.ADMIN, Role.AGENT)
-  findCategories(@Param('id', ParseIntPipe) id: number) {
-    return this.furnishingsService.findCategoriesByFurnishing(id);
+  findByCategories(@Param('id', ParseIntPipe) id: number) {
+    return this.furnishingsService.findFurnishingByCategories(id);
   }
 }

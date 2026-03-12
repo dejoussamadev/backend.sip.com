@@ -28,6 +28,12 @@ export class CategoriesController {
     return this.categoriesService.findAll();
   }
 
+  @Get('count')
+  @HttpCode(HttpStatus.OK)
+  countCategories() {
+    return this.categoriesService.countCategories();
+  }
+
   @Get(':id')
   @Roles(Role.ADMIN, Role.AGENT)
   findOne(@Param('id', ParseIntPipe) id: number) {
@@ -36,7 +42,10 @@ export class CategoriesController {
 
   @Patch(':id')
   @Roles(Role.ADMIN)
-  update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateCategoryDto) {
+  update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateCategoryDto,
+  ) {
     return this.categoriesService.update(id, dto);
   }
 

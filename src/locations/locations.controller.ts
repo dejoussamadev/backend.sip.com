@@ -28,6 +28,12 @@ export class LocationsController {
     return this.locationsService.findAll();
   }
 
+  @Get('count')
+  @HttpCode(HttpStatus.OK)
+  countLocations() {
+    return this.locationsService.countLocations();
+  }
+
   @Get(':id')
   @Roles(Role.ADMIN, Role.AGENT)
   findOne(@Param('id', ParseIntPipe) id: number) {

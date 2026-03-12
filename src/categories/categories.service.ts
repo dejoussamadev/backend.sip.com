@@ -13,7 +13,10 @@ export class CategoriesService {
 
   findAll() {
     return this.prisma.category.findMany({
-      include: { types: { include: { type: true } }, furnishings: { include: { furnishing: true } } },
+      include: {
+        types: { include: { type: true } },
+        furnishings: { include: { furnishing: true } },
+      },
       orderBy: { name: 'asc' },
     });
   }
@@ -21,7 +24,10 @@ export class CategoriesService {
   async findOne(id: number) {
     const category = await this.prisma.category.findUnique({
       where: { id },
-      include: { types: { include: { type: true } }, furnishings: { include: { furnishing: true } } },
+      include: {
+        types: { include: { type: true } },
+        furnishings: { include: { furnishing: true } },
+      },
     });
     if (!category) throw new NotFoundException('Category not found');
     return category;
@@ -42,7 +48,13 @@ export class CategoriesService {
     await this.findOne(id);
     return this.prisma.property.findMany({
       where: { categoryId: id },
-      include: { type: true, layout: true, location: true, agent: true, landlord: true },
+      include: {
+        type: true,
+        layout: true,
+        location: true,
+        agent: true,
+        landlord: true,
+      },
       orderBy: { updatedAt: 'desc' },
     });
   }
@@ -65,5 +77,11 @@ export class CategoriesService {
       include: { furnishing: true },
     });
     return categoryFurnishings.map((cf) => cf.furnishing);
+  }
+
+  async countCategories() {
+    return {
+      total: await this.prisma.category.count(),
+    };
   }
 }

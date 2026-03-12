@@ -28,6 +28,12 @@ export class FacilitiesController {
     return this.facilitiesService.findAll();
   }
 
+  @Get('count')
+  @HttpCode(HttpStatus.OK)
+  countFacilities() {
+    return this.facilitiesService.countFacilities();
+  }
+
   @Get(':id')
   @Roles(Role.ADMIN, Role.AGENT)
   findOne(@Param('id', ParseIntPipe) id: number) {

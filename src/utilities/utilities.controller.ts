@@ -28,6 +28,12 @@ export class UtilitiesController {
     return this.utilitiesService.findAll();
   }
 
+  @Get('count')
+  @HttpCode(HttpStatus.OK)
+  countUtilities() {
+    return this.utilitiesService.countUtilities();
+  }
+
   @Get(':id')
   @Roles(Role.ADMIN, Role.AGENT)
   findOne(@Param('id', ParseIntPipe) id: number) {

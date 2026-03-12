@@ -111,7 +111,9 @@ export class PropertiesService {
     const typeId = dto.typeId ? Number(dto.typeId) : undefined;
     const layoutId = dto.layoutId ? Number(dto.layoutId) : undefined;
     const locationId = dto.locationId ? Number(dto.locationId) : undefined;
-    const furnishingId = dto.furnishingId ? Number(dto.furnishingId) : undefined;
+    const furnishingId = dto.furnishingId
+      ? Number(dto.furnishingId)
+      : undefined;
 
     const property = await this.prisma.property.create({
       data: {

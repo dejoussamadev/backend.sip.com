@@ -38,10 +38,23 @@ export class FacilitiesService {
       where: { facilityId: id },
       include: {
         property: {
-          include: { category: true, type: true, layout: true, location: true, agent: true, landlord: true },
+          include: {
+            category: true,
+            type: true,
+            layout: true,
+            location: true,
+            agent: true,
+            landlord: true,
+          },
         },
       },
     });
     return propertyFacilities.map((pf) => pf.property);
+  }
+
+  async countFacilities() {
+    return {
+      total: await this.prisma.facility.count(),
+    };
   }
 }

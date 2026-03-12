@@ -48,12 +48,17 @@ export class LayoutsService {
   }
 
   // Récupérer les types d'un layout
-  async findTypesByLayout(id: number) {
-    await this.findOne(id);
+  async findLayoutsByType(id: number) {
     const typeLayouts = await this.prisma.typeLayout.findMany({
-      where: { layoutId: id },
-      include: { type: true },
+      where: { typeId: id },
+      include: { layout: true },
     });
-    return typeLayouts.map((tl) => tl.type);
+    return typeLayouts.map((tl) => tl.layout);
+  }
+
+  async countLayouts() {
+    return {
+      total: await this.prisma.layout.count(),
+    };
   }
 }

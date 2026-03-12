@@ -1,6 +1,15 @@
 import {
-  Controller, Get, Post, Body, Patch, Param, Delete,
-  UseGuards, ParseIntPipe, HttpCode, HttpStatus,
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  UseGuards,
+  ParseIntPipe,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import { LayoutsService } from './layouts.service';
 import { CreateLayoutDto } from './dto/create-layout.dto';
@@ -26,6 +35,12 @@ export class LayoutsController {
   @Roles(Role.ADMIN, Role.AGENT)
   findAll() {
     return this.layoutsService.findAll();
+  }
+
+  @Get('count')
+  @HttpCode(HttpStatus.OK)
+  countLayouts() {
+    return this.layoutsService.countLayouts();
   }
 
   @Get(':id')
@@ -55,9 +70,9 @@ export class LayoutsController {
   }
 
   // GET /layouts/:id/types
-  @Get(':id/types')
+  @Get('by-type/:id')
   @Roles(Role.ADMIN, Role.AGENT)
   findTypes(@Param('id', ParseIntPipe) id: number) {
-    return this.layoutsService.findTypesByLayout(id);
+    return this.layoutsService.findLayoutsByType(id);
   }
 }

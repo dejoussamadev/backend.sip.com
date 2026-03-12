@@ -38,10 +38,23 @@ export class UtilitiesService {
       where: { utilityId: id },
       include: {
         property: {
-          include: { category: true, type: true, layout: true, location: true, agent: true, landlord: true },
+          include: {
+            category: true,
+            type: true,
+            layout: true,
+            location: true,
+            agent: true,
+            landlord: true,
+          },
         },
       },
     });
     return propertyUtilities.map((pu) => pu.property);
+  }
+
+  async countUtilities() {
+    return {
+      total: await this.prisma.utility.count(),
+    };
   }
 }

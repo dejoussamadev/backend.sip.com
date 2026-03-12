@@ -1,8 +1,4 @@
-import {
-  Injectable,
-  NotFoundException,
-  Logger,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateLandlordDto } from './dto/create-landlord.dto';
 import { UpdateLandlordDto } from './dto/update-landlord.dto';
@@ -71,7 +67,7 @@ export class LandlordsService {
     this.logger.log(`Landlord mis à jour: ID ${id}`);
     return landlord;
   }
-// Récupérer les 20 premiers landlords (id + nom) - ADMIN seulement
+  // Récupérer les 20 premiers landlords (id + nom) - ADMIN seulement
   async getSimpleList() {
     return this.prisma.landlord.findMany({
       select: {
@@ -83,12 +79,17 @@ export class LandlordsService {
     });
   }
 
-
   // Supprimer un landlord
   async remove(id: number) {
     await this.findOne(id);
     await this.prisma.landlord.delete({ where: { id } });
     this.logger.log(`Landlord supprimé: ID ${id}`);
     return { message: `Landlord #${id} supprimé avec succès` };
+  }
+
+  async countLandlords() {
+    return {
+      total: await this.prisma.landlord.count(),
+    };
   }
 }

@@ -42,18 +42,31 @@ export class FurnishingsService {
     await this.findOne(id);
     return this.prisma.property.findMany({
       where: { furnishingId: id },
-      include: { category: true, type: true, layout: true, location: true, agent: true, landlord: true },
+      include: {
+        category: true,
+        type: true,
+        layout: true,
+        location: true,
+        agent: true,
+        landlord: true,
+      },
       orderBy: { updatedAt: 'desc' },
     });
   }
 
   // Récupérer les categories d'un furnishing
-  async findCategoriesByFurnishing(id: number) {
+  async findFurnishingByCategories(id: number) {
     await this.findOne(id);
     const catFurnishings = await this.prisma.categoryFurnishing.findMany({
-      where: { furnishingId: id },
-      include: { category: true },
+      where: { categoryId: id },
+      include: { furnishing: true },
     });
-    return catFurnishings.map((cf) => cf.category);
+    return catFurnishings.map((cf) => cf.furnishing);
+  }
+
+  async countFurnishings() {
+    return {
+      total: await this.prisma.furnishing.count(),
+    };
   }
 }
