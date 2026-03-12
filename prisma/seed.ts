@@ -388,24 +388,6 @@ async function seedAgents(): Promise<NamedRecord[]> {
     },
   });
 
-  await Promise.all(
-    Array.from({ length: 10 }, async (_, i) =>
-      prisma.agent.create({
-        data: {
-          name: faker.person.fullName(),
-          agentCode: `AGT${String(i + 1).padStart(5, '0')}`,
-          email: faker.internet.email(),
-          password: await bcrypt.hash('Agent@123456', 12),
-    // Al Khor
-    // Al Rayyan
-    // Al Shamal
-    // Al Sheehaniya
-    // Al Wakra
-    // Doha
-      isActive: true,
-      photo: faker.image.avatar(),
-    },
-  });
 
   await Promise.all(
     Array.from({ length: 10 }, async (_, i) =>
