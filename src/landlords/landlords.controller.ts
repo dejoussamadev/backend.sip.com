@@ -12,6 +12,7 @@ import {
   HttpStatus,
   UseInterceptors,
   UploadedFiles,
+  Query,
 } from '@nestjs/common';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
@@ -71,9 +72,21 @@ export class LandlordsController {
   // Liste de tous les landlords
   @Get()
   @Roles(Role.ADMIN, Role.AGENT)
-  findAll() {
-    return this.landlordsService.findAll();
+  findAll(
+    @Query('with_pagination') withPagination?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('search') search?: string,
+  ) {
+    const paginate = withPagination === 'true';
+    return this.landlordsService.findAll({
+      paginate,
+      page: page ? parseInt(page, 10) : 1,
+      limit: limit ? parseInt(limit, 10) : 10,
+      search: search?.trim() || undefined,
+    });
   }
+
   // Récupérer les 20 premiers landlords (id + nom)
   @Get('list/simple')
   @Roles(Role.ADMIN)

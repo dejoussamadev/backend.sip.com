@@ -22,13 +22,53 @@ export class LandlordsService {
   }
 
   // Liste de tous les landlords
-  async findAll() {
-    return this.prisma.landlord.findMany({
-      orderBy: { id: 'desc' },
-      include: {
-        _count: { select: { properties: true } },
+  async findAll(options: {
+    paginate: boolean;
+    page: number;
+    limit: number;
+    search?: string;
+  }) {
+    const { paginate, page, limit, search } = options;
+
+    const where = search
+      ? {
+          OR: [{ name: { contains: search, mode: 'insensitive' as const } }],
+        }
+      : {};
+
+    const include = {
+      _count: { select: { properties: true } },
+    };
+
+    if (!paginate) {
+      return this.prisma.landlord.findMany({
+        where,
+        orderBy: { id: 'asc' },
+        include,
+      });
+    }
+
+    const skip = (page - 1) * limit;
+    const [data, total] = await this.prisma.$transaction([
+      this.prisma.landlord.findMany({
+        where,
+        orderBy: { id: 'desc' },
+        include,
+        skip,
+        take: limit,
+      }),
+      this.prisma.landlord.count({ where }),
+    ]);
+
+    return {
+      data,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
       },
-    });
+    };
   }
 
   // Trouver un landlord par ID
