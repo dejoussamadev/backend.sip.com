@@ -10,6 +10,7 @@ import {
   ParseIntPipe,
   HttpCode,
   HttpStatus,
+  Query,
 } from '@nestjs/common';
 import { LayoutsService } from './layouts.service';
 import { CreateLayoutDto } from './dto/create-layout.dto';
@@ -33,8 +34,19 @@ export class LayoutsController {
 
   @Get()
   @Roles(Role.ADMIN, Role.AGENT)
-  findAll() {
-    return this.layoutsService.findAll();
+  findAll(
+    @Query('with_pagination') withPagination?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('search') search?: string,
+  ) {
+    const paginate = withPagination === 'true';
+    return this.layoutsService.findAll({
+      paginate,
+      page: page ? parseInt(page, 10) : 1,
+      limit: limit ? parseInt(limit, 10) : 10,
+      search: search?.trim() || undefined,
+    });
   }
 
   @Get('count')

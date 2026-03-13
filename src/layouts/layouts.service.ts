@@ -11,11 +11,57 @@ export class LayoutsService {
     return this.prisma.layout.create({ data: dto });
   }
 
-  findAll() {
-    return this.prisma.layout.findMany({
-      include: { types: { include: { type: true } } },
-      orderBy: { name: 'asc' },
+  async findAll(options: {
+    paginate: boolean;
+    page: number;
+    limit: number;
+    search?: string;
+  }) {
+    const { paginate, page, limit, search } = options;
+    const where = search
+      ? { OR: [{ name: { contains: search, mode: 'insensitive' as const } }] }
+      : {};
+
+    const include = {
+      _count: { select: { properties: true, types: true } },
+    };
+
+    const mapLayout = ({ _count, ...landlord }: any) => ({
+      ...landlord,
+      propertiesCount: _count.properties,
+      typesCount: _count.types,
     });
+
+    if (!paginate) {
+      const data = await this.prisma.layout.findMany({
+        where,
+        orderBy: { id: 'asc' },
+        include,
+      });
+      return data.map(mapLayout);
+    }
+
+    const skip = (page - 1) * limit;
+    const [data, total] = await this.prisma.$transaction([
+      this.prisma.layout.findMany({
+        where,
+        orderBy: { id: 'desc' },
+        include,
+        skip,
+        take: limit,
+      }),
+      this.prisma.layout.count({ where }),
+    ]);
+
+    return {
+      data: data.map(mapLayout),
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
   }
 
   async findOne(id: number) {
@@ -42,7 +88,13 @@ export class LayoutsService {
     await this.findOne(id);
     return this.prisma.property.findMany({
       where: { layoutId: id },
-      include: { category: true, type: true, location: true, agent: true, landlord: true },
+      include: {
+        category: true,
+        type: true,
+        location: true,
+        agent: true,
+        landlord: true,
+      },
       orderBy: { updatedAt: 'desc' },
     });
   }

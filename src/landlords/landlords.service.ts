@@ -31,21 +31,25 @@ export class LandlordsService {
     const { paginate, page, limit, search } = options;
 
     const where = search
-      ? {
-          OR: [{ name: { contains: search, mode: 'insensitive' as const } }],
-        }
+      ? { OR: [{ name: { contains: search, mode: 'insensitive' as const } }] }
       : {};
 
     const include = {
       _count: { select: { properties: true } },
     };
 
+    const mapLandlord = ({ _count, ...landlord }: any) => ({
+      ...landlord,
+      propertiesCount: _count.properties,
+    });
+
     if (!paginate) {
-      return this.prisma.landlord.findMany({
+      const data = await this.prisma.landlord.findMany({
         where,
         orderBy: { id: 'asc' },
         include,
       });
+      return data.map(mapLandlord);
     }
 
     const skip = (page - 1) * limit;
@@ -61,7 +65,7 @@ export class LandlordsService {
     ]);
 
     return {
-      data,
+      data: data.map(mapLandlord),
       meta: {
         total,
         page,
