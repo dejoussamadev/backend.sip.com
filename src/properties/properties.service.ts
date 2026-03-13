@@ -130,7 +130,11 @@ export class PropertiesService {
         commission: dto.commissionPct ?? 0,
         status: PropertyStatus.PENDING,
         expirationDate: dto.expiryDate
-          ? new Date(dto.expiryDate as string)
+          ? (typeof dto.expiryDate === 'string'
+              ? new Date(dto.expiryDate)
+              : dto.expiryDate instanceof Date
+              ? dto.expiryDate
+              : new Date(String(dto.expiryDate)))
           : new Date(),
         access: dto.access ?? null,
         hasUtilities: dto.utilitiesIncluded ?? false,
@@ -265,7 +269,12 @@ export class PropertiesService {
       updateData.directions = dto.propertyNotes;
     if (dto.imageUrls !== undefined) updateData.images = dto.imageUrls;
     if (dto.expiryDate !== undefined)
-      updateData.expirationDate = new Date(dto.expiryDate as string);
+      updateData.expirationDate =
+        typeof dto.expiryDate === 'string'
+          ? new Date(dto.expiryDate)
+          : dto.expiryDate instanceof Date
+          ? dto.expiryDate
+          : new Date(String(dto.expiryDate));
     if (dto.agentId) updateData.agentId = Number(dto.agentId);
     if (dto.landlordId) updateData.landlordId = Number(dto.landlordId);
     if (dto.categoryId) updateData.categoryId = Number(dto.categoryId);
