@@ -12,8 +12,8 @@ export class CreateLandlordDto {
   name: string;
 
   @IsDateString()
-  @IsOptional()
-  expiryDate?: string;
+  @IsNotEmpty()
+  expiryDate: string;
 
   @IsEmail()
   @IsNotEmpty()
@@ -40,15 +40,15 @@ export class CreateLandlordDto {
   note?: string;
 
   @IsString()
-  @IsOptional()
-  mapLink?: string;
+  @IsNotEmpty()
+  mapLink: string;
 
   // Chemins des fichiers uploadés
   @IsString()
-  @IsOptional()
-  marketingAgreement?: string;
+  @IsNotEmpty()
+  marketingAgreement: string;
 
   @IsString()
-  @IsOptional()
-  draftContract?: string;
+  @IsNotEmpty()
+  draftContract: string;
 }

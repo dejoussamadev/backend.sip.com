@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsNumber, IsInt, IsBoolean, IsArray, IsEnum } from 'class-validator';
+import { IsString, IsOptional, IsNumber, IsInt, IsBoolean, IsArray, IsEnum, Min, Max, MinDate } from 'class-validator';
 import {
   PropertyCategory, PropertyType, PropertyLayout,
   BalconyOption, StatusOption, AccessOption, FurnishingOption,
@@ -27,10 +27,10 @@ export class CreatePropertyDto {
 
   @IsNumber() price: number;
   @IsOptional() @IsString() currency?: string;
-  @IsOptional() @IsNumber() commissionPct?: number;
+  @IsOptional() @IsNumber() @Min(0) @Max(100) commissionPct?: number;
 
   @IsOptional() @IsEnum(StatusOption) status?: StatusOption;
-  @IsOptional() expiryDate?: Date | string;
+  @IsOptional() @MinDate(new Date()) expiryDate?: Date;
 
   @IsOptional() @IsEnum(PropertyAccess) access?: PropertyAccess;
   @IsOptional() @IsBoolean() utilitiesIncluded?: boolean;

@@ -19,12 +19,12 @@ export class CreateAgentDto {
   mobile: string;
 
   @IsString()
-  @IsOptional()
-  countryCode?: string = '+216';
+  @IsNotEmpty()
+  countryCode: string;
 
   @IsString()
-  @IsOptional()
-  designation?: string;
+  @IsNotEmpty()
+  designation: string;
 
   @IsString()
   @IsOptional()
