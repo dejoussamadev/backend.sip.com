@@ -10,6 +10,8 @@ import {
   ParseIntPipe,
   HttpCode,
   HttpStatus,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
 import { AgentsService } from './agents.service';
 import { CreateAgentDto } from './dto/create-agent.dto';
@@ -22,6 +24,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Role } from '@prisma/client';
+import { SingleImageInterceptor } from '../upload/interceptors/file-upload.interceptor';
 
 @Controller('agents')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -65,10 +68,15 @@ export class AgentsController {
   // Modifier mon profil
   @Patch('profile/me')
   @Roles(Role.AGENT, Role.ADMIN)
+  @UseInterceptors(SingleImageInterceptor('photo'))
   updateMyProfile(
       @CurrentUser() user: any,
       @Body() updateProfileDto: UpdateProfileDto,
+      @UploadedFile() file?: Express.Multer.File,
   ) {
+    if (file) {
+      updateProfileDto.photo = file.path;
+    }
     return this.agentsService.updateProfile(user.id, updateProfileDto);
   }
 

@@ -412,29 +412,39 @@ async function seedAgents(): Promise<NamedRecord[]> {
   return agents;
 }
 
+
 async function seedLandlords(): Promise<NamedRecord[]> {
   console.log('  → Seeding landlords...');
+
   const records = await Promise.all(
-    Array.from({ length: 10 }).map(() =>
-      prisma.landlord.create({
-        data: {
-          name: faker.person.fullName(),
-          email: faker.internet.email(),
-          countryCode: '+974',
-          mobile: faker.phone.number(),
-          expiryDate: faker.datatype.boolean() ? faker.date.future() : null,
-          alternativeCountryCode: faker.datatype.boolean() ? '+974' : null,
-          alternativeMobile: faker.datatype.boolean()
-            ? faker.phone.number()
-            : null,
-          note: faker.datatype.boolean() ? faker.lorem.sentence() : null,
-          mapLink: faker.datatype.boolean() ? faker.internet.url() : null,
-          marketingAgreement: faker.datatype.boolean() ? 'Yes' : 'No',
-          draftContract: faker.datatype.boolean() ? 'Yes' : 'No',
-        },
+      Array.from({ length: 10 }).map((_, index) => {
+        // Date d'expiration toujours présente
+        const expiryDate = faker.date.future();
+
+        return prisma.landlord.create({
+          data: {
+            name: faker.person.fullName(),
+            email: faker.internet.email(),
+            countryCode: '+974',
+            mobile: faker.phone.number(),
+            expiryDate: expiryDate, // TOUJOURS une date, jamais null
+
+            alternativeCountryCode: faker.datatype.boolean(0.3) ? '+974' : null,
+            alternativeMobile: faker.datatype.boolean(0.3) ? faker.phone.number() : null,
+            note: faker.datatype.boolean(0.5) ? faker.lorem.sentence() : null,
+
+            mapLink: faker.datatype.boolean(0.7)
+                ? faker.internet.url()
+                : 'https://maps.google.com/?q=Qatar', // Valeur par défaut
+
+            // Toujours des chemins de fichiers valides
+            marketingAgreement: `/uploads/landlords/agreement-${index + 1}.pdf`,
+            draftContract: `/uploads/landlords/contract-${index + 1}.pdf`,
+          },
+        });
       }),
-    ),
   );
+
   console.log(`  ✓ ${records.length} landlords`);
   return records;
 }

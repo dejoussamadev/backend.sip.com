@@ -10,6 +10,8 @@ import {
   Query,
   Req,
   UseGuards,
+  UseInterceptors,
+  UploadedFiles,
 } from '@nestjs/common';
 import type { Request } from 'express';
 import { PropertiesService } from './properties.service';
@@ -19,6 +21,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { Role } from '@prisma/client';
+import { PropertyFilesInterceptor } from '../upload/interceptors/file-upload.interceptor';
 
 @Controller('properties')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -27,7 +30,19 @@ export class PropertiesController {
 
   @Post()
   @Roles(Role.ADMIN, Role.AGENT)
-  create(@Body() dto: CreatePropertyDto, @Req() req: Request) {
+  @UseInterceptors(PropertyFilesInterceptor('images', 'documents'))
+  create(
+    @Body() dto: CreatePropertyDto,
+    @UploadedFiles()
+    files: { images?: Express.Multer.File[]; documents?: Express.Multer.File[] },
+    @Req() req: Request,
+  ) {
+    if (files?.images?.length) {
+      dto.imageUrls = files.images.map((f) => f.path);
+    }
+    if (files?.documents?.length) {
+      dto.documents = files.documents.map((f) => f.path);
+    }
     const agentName = (req.user as any)?.name ?? 'Unknown';
     return this.propertiesService.create(dto, agentName);
   }
@@ -74,11 +89,20 @@ export class PropertiesController {
 
   @Patch(':id')
   @Roles(Role.ADMIN, Role.AGENT)
+  @UseInterceptors(PropertyFilesInterceptor('images', 'documents'))
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdatePropertyDto,
+    @UploadedFiles()
+    files: { images?: Express.Multer.File[]; documents?: Express.Multer.File[] },
     @Req() req: Request,
   ) {
+    if (files?.images?.length) {
+      dto.imageUrls = files.images.map((f) => f.path);
+    }
+    if (files?.documents?.length) {
+      dto.documents = files.documents.map((f) => f.path);
+    }
     const agentName = (req.user as any)?.name ?? 'Unknown';
     return this.propertiesService.update(id, dto, agentName);
   }

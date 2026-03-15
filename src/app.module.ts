@@ -14,6 +14,7 @@ import { FurnishingsModule } from './furnishings/furnishings.module';
 import { FacilitiesModule } from './facilities/facilities.module';
 import { UtilitiesModule } from './utilities/utilities.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { UploadModule } from './upload/upload.module';
 
 
 @Module({
@@ -31,6 +32,8 @@ import { NotificationsModule } from './notifications/notifications.module';
     FacilitiesModule,
     UtilitiesModule,
     NotificationsModule,
+    UploadModule,
+
   ],
   controllers: [AppController],
   providers: [AppService],

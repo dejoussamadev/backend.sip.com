@@ -14,7 +14,7 @@ export class LandlordsService {
     const landlord = await this.prisma.landlord.create({
       data: {
         ...dto,
-        expiryDate: dto.expiryDate ? new Date(dto.expiryDate) : null,
+        expiryDate: new Date(dto.expiryDate), // Plus de null, toujours une date valide
       },
     });
     this.logger.log(`Landlord créé: ${landlord.name} (ID: ${landlord.id})`);
@@ -31,8 +31,8 @@ export class LandlordsService {
     const { paginate, page, limit, search } = options;
 
     const where = search
-      ? { OR: [{ name: { contains: search, mode: 'insensitive' as const } }] }
-      : {};
+        ? { OR: [{ name: { contains: search, mode: 'insensitive' as const } }] }
+        : {};
 
     const include = {
       _count: { select: { properties: true } },
@@ -101,16 +101,22 @@ export class LandlordsService {
   // Mettre à jour un landlord
   async update(id: number, dto: UpdateLandlordDto) {
     await this.findOne(id);
+
+    const data: any = { ...dto };
+    if (dto.expiryDate) {
+      data.expiryDate = new Date(dto.expiryDate);
+    }
+    // Note: expiryDate est maintenant obligatoire, mais pour update on peut ne pas le fournir
+
     const landlord = await this.prisma.landlord.update({
       where: { id },
-      data: {
-        ...dto,
-        expiryDate: dto.expiryDate ? new Date(dto.expiryDate) : undefined,
-      },
+      data,
     });
+
     this.logger.log(`Landlord mis à jour: ID ${id}`);
     return landlord;
   }
+
   // Récupérer les 20 premiers landlords (id + nom) - ADMIN seulement
   async getSimpleList() {
     return this.prisma.landlord.findMany({

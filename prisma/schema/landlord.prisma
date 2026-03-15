@@ -1,16 +1,17 @@
+// prisma/schema/landlord.prisma
 model Landlord {
-  id                     Int       @id @default(autoincrement())
+  id                     Int      @id @default(autoincrement())
   name                   String
-  expiryDate             DateTime?
+  expiryDate             DateTime
   email                  String
-  countryCode            String    @default("+974")
+  countryCode            String   @default("+974")
   mobile                 String
   alternativeCountryCode String?
   alternativeMobile      String?
   note                   String?
-  mapLink                String?
-  marketingAgreement     String?
-  draftContract          String?
+  mapLink                String
+  marketingAgreement     String
+  draftContract          String
 
   properties Property[]
 
