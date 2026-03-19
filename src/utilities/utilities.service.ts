@@ -11,8 +11,55 @@ export class UtilitiesService {
     return this.prisma.utility.create({ data: dto });
   }
 
-  findAll() {
-    return this.prisma.utility.findMany({ orderBy: { name: 'asc' } });
+  async findAll(options: {
+    paginate: boolean;
+    page: number;
+    limit: number;
+    search?: string;
+  }) {
+    const { paginate, page, limit, search } = options;
+
+    const where = search
+      ? { OR: [{ name: { contains: search, mode: 'insensitive' as const } }] }
+      : {};
+    const include = {
+      _count: { select: { properties: true } },
+    };
+    const mapUtility = ({ _count, ...utility }: any) => ({
+      ...utility,
+      propertiesCount: _count.properties,
+    });
+
+    if (!paginate) {
+      const data = await this.prisma.utility.findMany({
+        where,
+        orderBy: { name: 'asc' },
+        include,
+      });
+      return data.map(mapUtility);
+    }
+
+    const skip = (page - 1) * limit;
+    const [data, total] = await this.prisma.$transaction([
+      this.prisma.utility.findMany({
+        where,
+        orderBy: { id: 'desc' },
+        include,
+        skip,
+        take: limit,
+      }),
+      this.prisma.utility.count({ where }),
+    ]);
+
+    return {
+      data: data.map(mapUtility),
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
   }
 
   async findOne(id: number) {

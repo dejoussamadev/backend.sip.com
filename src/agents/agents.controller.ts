@@ -70,9 +70,9 @@ export class AgentsController {
   @Roles(Role.AGENT, Role.ADMIN)
   @UseInterceptors(SingleImageInterceptor('photo'))
   updateMyProfile(
-      @CurrentUser() user: any,
-      @Body() updateProfileDto: UpdateProfileDto,
-      @UploadedFile() file?: Express.Multer.File,
+    @CurrentUser() user: any,
+    @Body() updateProfileDto: UpdateProfileDto,
+    @UploadedFile() file?: Express.Multer.File,
   ) {
     if (file) {
       updateProfileDto.photo = file.path;
@@ -84,14 +84,14 @@ export class AgentsController {
   @Patch('profile/change-password')
   @Roles(Role.AGENT, Role.ADMIN)
   changePassword(
-      @CurrentUser() user: any,
-      @Body() changePasswordDto: ChangePasswordDto,
+    @CurrentUser() user: any,
+    @Body() changePasswordDto: ChangePasswordDto,
   ) {
     return this.agentsService.changePassword(user.id, changePasswordDto);
   }
 
   // ==================== ROUTES ADMIN (par ID) ====================
-// Récupérer les 20 premiers agents (id + nom)
+  // Récupérer les 20 premiers agents (id + nom)
   @Get('list/simple')
   @Roles(Role.ADMIN)
   getSimpleList() {
@@ -109,8 +109,8 @@ export class AgentsController {
   @Patch(':id')
   @Roles(Role.ADMIN)
   update(
-      @Param('id', ParseIntPipe) id: number,
-      @Body() updateAgentDto: UpdateAgentDto,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updateAgentDto: UpdateAgentDto,
   ) {
     return this.agentsService.update(id, updateAgentDto);
   }

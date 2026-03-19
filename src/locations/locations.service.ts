@@ -11,8 +11,55 @@ export class LocationsService {
     return this.prisma.location.create({ data: dto });
   }
 
-  findAll() {
-    return this.prisma.location.findMany({ orderBy: { name: 'asc' } });
+  async findAll(options: {
+    paginate: boolean;
+    page: number;
+    limit: number;
+    search?: string;
+  }) {
+    const { paginate, page, limit, search } = options;
+
+    const where = search
+      ? { OR: [{ name: { contains: search, mode: 'insensitive' as const } }] }
+      : {};
+    const include = {
+      _count: { select: { properties: true } },
+    };
+    const mapLocation = ({ _count, ...location }: any) => ({
+      ...location,
+      propertiesCount: _count.properties,
+    });
+
+    if (!paginate) {
+      const data = await this.prisma.location.findMany({
+        where,
+        orderBy: { name: 'asc' },
+        include,
+      });
+      return data.map(mapLocation);
+    }
+
+    const skip = (page - 1) * limit;
+    const [data, total] = await this.prisma.$transaction([
+      this.prisma.location.findMany({
+        where,
+        orderBy: { id: 'desc' },
+        include,
+        skip,
+        take: limit,
+      }),
+      this.prisma.location.count({ where }),
+    ]);
+
+    return {
+      data: data.map(mapLocation),
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
   }
 
   async findOne(id: number) {

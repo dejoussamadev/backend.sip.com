@@ -35,8 +35,8 @@ import { v4 as uuidv4 } from 'uuid';
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class LandlordsController {
   constructor(
-      private readonly landlordsService: LandlordsService,
-      private readonly uploadService: UploadService,
+    private readonly landlordsService: LandlordsService,
+    private readonly uploadService: UploadService,
   ) {}
 
   // Créer un landlord
@@ -44,45 +44,51 @@ export class LandlordsController {
   @Roles(Role.ADMIN, Role.AGENT)
   @HttpCode(HttpStatus.CREATED)
   @UseInterceptors(
-      FileFieldsInterceptor(
-          [
-            { name: 'marketingAgreement', maxCount: 1 },
-            { name: 'draftContract', maxCount: 1 },
-          ],
-          {
-            storage: diskStorage({
-              destination: './uploads/landlords',
-              filename: (req, file, cb) => {
-                const uniqueSuffix = uuidv4();
-                const ext = extname(file.originalname);
-                cb(null, `${file.fieldname}-${uniqueSuffix}${ext}`);
-              },
-            }),
-            fileFilter: (req, file, cb) => {
-              const allowedMimes = [
-                'application/pdf',
-                'application/msword',
-                'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-              ];
-              if (allowedMimes.includes(file.mimetype)) {
-                cb(null, true);
-              } else {
-                cb(new BadRequestException('Type de fichier non autorisé. Utilisez PDF ou DOC'), false);
-              }
-            },
-            limits: {
-              fileSize: 10 * 1024 * 1024, // 10MB
-            },
+    FileFieldsInterceptor(
+      [
+        { name: 'marketingAgreement', maxCount: 1 },
+        { name: 'draftContract', maxCount: 1 },
+      ],
+      {
+        storage: diskStorage({
+          destination: './uploads/landlords',
+          filename: (req, file, cb) => {
+            const uniqueSuffix = uuidv4();
+            const ext = extname(file.originalname);
+            cb(null, `${file.fieldname}-${uniqueSuffix}${ext}`);
           },
-      ),
+        }),
+        fileFilter: (req, file, cb) => {
+          const allowedMimes = [
+            'application/pdf',
+            'application/msword',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          ];
+          if (allowedMimes.includes(file.mimetype)) {
+            cb(null, true);
+          } else {
+            cb(
+              new BadRequestException(
+                'Type de fichier non autorisé. Utilisez PDF ou DOC',
+              ),
+              false,
+            );
+          }
+        },
+        limits: {
+          fileSize: 10 * 1024 * 1024, // 10MB
+        },
+      },
+    ),
   )
   async create(
-      @UploadedFiles() files: {
-        marketingAgreement?: Express.Multer.File[];
-        draftContract?: Express.Multer.File[];
-      },
-      @Body() createLandlordDto: CreateLandlordDto,
-      @Req() req: Request,
+    @UploadedFiles()
+    files: {
+      marketingAgreement?: Express.Multer.File[];
+      draftContract?: Express.Multer.File[];
+    },
+    @Body() createLandlordDto: CreateLandlordDto,
+    @Req() req: Request,
   ) {
     // Vérifier que les fichiers sont présents
     if (!files?.marketingAgreement?.[0]) {
@@ -96,8 +102,14 @@ export class LandlordsController {
 
     try {
       // Utiliser UploadService pour générer les URLs
-      const marketingUrl = this.uploadService.getUrl(files.marketingAgreement[0], baseUrl);
-      const draftUrl = this.uploadService.getUrl(files.draftContract[0], baseUrl);
+      const marketingUrl = this.uploadService.getUrl(
+        files.marketingAgreement[0],
+        baseUrl,
+      );
+      const draftUrl = this.uploadService.getUrl(
+        files.draftContract[0],
+        baseUrl,
+      );
 
       // Créer l'objet avec les données + URLs des fichiers
       const landlordData: CreateLandlordDto = {
@@ -128,10 +140,10 @@ export class LandlordsController {
   @Get()
   @Roles(Role.ADMIN, Role.AGENT)
   findAll(
-      @Query('with_pagination') withPagination?: string,
-      @Query('page') page?: string,
-      @Query('limit') limit?: string,
-      @Query('search') search?: string,
+    @Query('with_pagination') withPagination?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('search') search?: string,
   ) {
     const paginate = withPagination === 'true';
     return this.landlordsService.findAll({
@@ -167,20 +179,20 @@ export class LandlordsController {
   @Roles(Role.ADMIN, Role.AGENT)
   @HttpCode(HttpStatus.OK)
   @UseInterceptors(
-      FileFieldsInterceptor([
-        { name: 'marketingAgreement', maxCount: 1 },
-        { name: 'draftContract', maxCount: 1 },
-      ]),
+    FileFieldsInterceptor([
+      { name: 'marketingAgreement', maxCount: 1 },
+      { name: 'draftContract', maxCount: 1 },
+    ]),
   )
   async update(
-      @Param('id', ParseIntPipe) id: number,
-      @Body() updateLandlordDto: UpdateLandlordDto,
-      @UploadedFiles()
-          files: {
-        marketingAgreement?: Express.Multer.File[];
-        draftContract?: Express.Multer.File[];
-      },
-      @Req() req: Request,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updateLandlordDto: UpdateLandlordDto,
+    @UploadedFiles()
+    files: {
+      marketingAgreement?: Express.Multer.File[];
+      draftContract?: Express.Multer.File[];
+    },
+    @Req() req: Request,
   ) {
     const baseUrl = `${req.protocol}://${req.get('host')}`;
 
@@ -190,11 +202,17 @@ export class LandlordsController {
 
       // Traiter les nouveaux fichiers s'ils sont fournis
       if (files?.marketingAgreement?.[0]) {
-        updateData.marketingAgreement = this.uploadService.getUrl(files.marketingAgreement[0], baseUrl);
+        updateData.marketingAgreement = this.uploadService.getUrl(
+          files.marketingAgreement[0],
+          baseUrl,
+        );
       }
 
       if (files?.draftContract?.[0]) {
-        updateData.draftContract = this.uploadService.getUrl(files.draftContract[0], baseUrl);
+        updateData.draftContract = this.uploadService.getUrl(
+          files.draftContract[0],
+          baseUrl,
+        );
       }
 
       return this.landlordsService.update(id, updateData);
@@ -232,16 +250,24 @@ export class LandlordsController {
     if (landlord.marketingAgreement) {
       try {
         // Extraire le chemin du fichier de l'URL
-        const filePath = landlord.marketingAgreement.replace(/^.*\/uploads/, './uploads');
+        const filePath = landlord.marketingAgreement.replace(
+          /^.*\/uploads/,
+          './uploads',
+        );
         this.uploadService.deleteFile(filePath);
       } catch (e) {
-        console.log('Erreur lors de la suppression du fichier marketingAgreement');
+        console.log(
+          'Erreur lors de la suppression du fichier marketingAgreement',
+        );
       }
     }
 
     if (landlord.draftContract) {
       try {
-        const filePath = landlord.draftContract.replace(/^.*\/uploads/, './uploads');
+        const filePath = landlord.draftContract.replace(
+          /^.*\/uploads/,
+          './uploads',
+        );
         this.uploadService.deleteFile(filePath);
       } catch (e) {
         console.log('Erreur lors de la suppression du fichier draftContract');
