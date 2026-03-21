@@ -8,23 +8,23 @@ import {
 
 export class CreateLandlordDto {
   @IsString()
-  @IsNotEmpty()
+  @IsNotEmpty({ message: 'Le nom est requis' })
   name: string;
 
   @IsDateString()
-  @IsNotEmpty()
+  @IsNotEmpty({ message: "La date d'expiration est requise" })
   expiryDate: string;
 
   @IsEmail()
-  @IsNotEmpty()
+  @IsNotEmpty({ message: 'L\'email est requis' })
   email: string;
 
   @IsString()
-  @IsNotEmpty()
+  @IsNotEmpty({ message: 'Le code pays est requis' })
   countryCode: string;
 
   @IsString()
-  @IsNotEmpty()
+  @IsNotEmpty({ message: 'Le mobile est requis' })
   mobile: string;
 
   @IsString()
@@ -40,15 +40,15 @@ export class CreateLandlordDto {
   note?: string;
 
   @IsString()
-  @IsNotEmpty()
+  @IsNotEmpty({ message: 'Le lien map est requis' })
   mapLink: string;
 
-  // Chemins des fichiers uploadés
+  // Ces champs seront remplis après l'upload
   @IsString()
-  @IsNotEmpty()
-  marketingAgreement: string;
+  @IsOptional()
+  marketingAgreement?: string;
 
   @IsString()
-  @IsNotEmpty()
-  draftContract: string;
+  @IsOptional()
+  draftContract?: string;
 }
