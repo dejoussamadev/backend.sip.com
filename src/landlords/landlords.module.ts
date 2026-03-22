@@ -8,6 +8,7 @@ import { UploadModule } from '../upload/upload.module';
 @Module({
   imports: [PrismaModule, UploadModule],
   
+
   controllers: [LandlordsController],
   providers: [LandlordsService],
   exports: [LandlordsService],
