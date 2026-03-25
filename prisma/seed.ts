@@ -7,6 +7,8 @@ import {
 } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { faker } from '@faker-js/faker';
+import { promises as fs } from 'fs';
+import * as path from 'path';
 
 const prisma = new PrismaClient();
 
@@ -164,6 +166,20 @@ const TYPE_LAYOUT_RELATIONS: Record<string, string[]> = {
 
 type NamedRecord = { id: number; name: string };
 type NameMap<T extends NamedRecord> = Record<string, T>;
+type SeedImageAssets = {
+  agentPhotos: string[];
+  landlordPhotos: string[];
+  propertyImages: string[];
+};
+
+type PexelsPhoto = {
+  id: number;
+  src?: {
+    large2x?: string;
+    large?: string;
+    medium?: string;
+  };
+};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // HELPERS
@@ -183,6 +199,181 @@ function pickRandomSubset<T>(arr: T[], min = 0, max?: number): T[] {
 
 function toNameMap<T extends NamedRecord>(records: T[]): NameMap<T> {
   return Object.fromEntries(records.map((r) => [r.name, r]));
+}
+
+function seededUploadPath(...segments: string[]): string {
+  return `/uploads/${segments.join('/')}`;
+}
+
+function extensionFromContentType(contentType: string | null): string {
+  switch (contentType) {
+    case 'image/png':
+      return '.png';
+    case 'image/webp':
+      return '.webp';
+    case 'image/gif':
+      return '.gif';
+    default:
+      return '.jpg';
+  }
+}
+
+async function fetchPexelsPhotos(options: {
+  count: number;
+  query: string;
+  orientation?: 'landscape' | 'portrait' | 'square';
+}): Promise<PexelsPhoto[]> {
+  const apiKey = process.env.PEXELS_API_KEY;
+  if (!apiKey || options.count <= 0) {
+    return [];
+  }
+
+  const params = new URLSearchParams({
+    query: options.query,
+    per_page: String(Math.min(options.count, 80)),
+  });
+
+  if (options.orientation) {
+    params.set('orientation', options.orientation);
+  }
+
+  try {
+    const response = await fetch(
+      `https://api.pexels.com/v1/search?${params.toString()}`,
+      {
+        headers: {
+          Authorization: apiKey,
+        },
+      },
+    );
+
+    if (!response.ok) {
+      throw new Error(`Pexels responded with ${response.status}`);
+    }
+
+    const payload = (await response.json()) as { photos?: PexelsPhoto[] };
+    return (payload.photos ?? []).slice(0, options.count);
+  } catch (error) {
+    console.warn(
+      `  ! Pexels fetch failed for "${options.query}", falling back to local placeholders.`,
+    );
+    return [];
+  }
+}
+
+async function downloadImageToUploads(options: {
+  url: string;
+  filenameBase: string;
+}): Promise<string | null> {
+  const uploadsDir = path.resolve(process.cwd(), 'uploads/images');
+  await fs.mkdir(uploadsDir, { recursive: true });
+
+  try {
+    const response = await fetch(options.url);
+
+    if (!response.ok) {
+      throw new Error(`Image download responded with ${response.status}`);
+    }
+
+    const extension = extensionFromContentType(response.headers.get('content-type'));
+    const filename = `${options.filenameBase}${extension}`;
+    const filePath = path.join(uploadsDir, filename);
+    const arrayBuffer = await response.arrayBuffer();
+
+    await fs.writeFile(filePath, Buffer.from(arrayBuffer));
+
+    return seededUploadPath('images', filename);
+  } catch (error) {
+    console.warn(`  ! Failed to download image "${options.filenameBase}".`);
+    return null;
+  }
+}
+
+async function prepareDownloadedImages(options: {
+  count: number;
+  query: string;
+  orientation?: 'landscape' | 'portrait' | 'square';
+  filenamePrefix: string;
+}): Promise<string[]> {
+  const photos = await fetchPexelsPhotos({
+    count: options.count,
+    query: options.query,
+    orientation: options.orientation,
+  });
+
+  const downloads = await Promise.all(
+    photos
+      .map((photo, index) => ({
+        url: photo.src?.large2x ?? photo.src?.large ?? photo.src?.medium,
+        filenameBase: `${options.filenamePrefix}-${photo.id}-${index + 1}`,
+      }))
+      .filter((photo): photo is { url: string; filenameBase: string } => Boolean(photo.url))
+      .map((photo) => downloadImageToUploads(photo)),
+  );
+
+  return downloads.filter((filePath): filePath is string => Boolean(filePath));
+}
+
+async function removeSeededImages(): Promise<void> {
+  const uploadsDir = path.resolve(process.cwd(), 'uploads/images');
+
+  try {
+    const filenames = await fs.readdir(uploadsDir);
+    const seededFiles = filenames.filter(
+      (name) =>
+        name.startsWith('seed-agent-') ||
+        name.startsWith('seed-landlord-') ||
+        name.startsWith('seed-property-'),
+    );
+
+    await Promise.all(
+      seededFiles.map((filename) => fs.unlink(path.join(uploadsDir, filename))),
+    );
+  } catch (error: any) {
+    if (error?.code !== 'ENOENT') {
+      console.warn('  ! Failed to clean existing seeded images.');
+    }
+  }
+}
+
+async function prepareSeedImageAssets(): Promise<SeedImageAssets> {
+  const apiKey = process.env.PEXELS_API_KEY;
+  if (!apiKey) {
+    return { agentPhotos: [], landlordPhotos: [], propertyImages: [] };
+  }
+
+  await removeSeededImages();
+
+  const [agentPhotos, landlordPhotos, propertyImages] = await Promise.all([
+    prepareDownloadedImages({
+      count: 11,
+      query: 'real estate agent portrait',
+      orientation: 'portrait',
+      filenamePrefix: 'seed-agent',
+    }),
+    prepareDownloadedImages({
+      count: 10,
+      query: 'business owner portrait',
+      orientation: 'portrait',
+      filenamePrefix: 'seed-landlord',
+    }),
+    prepareDownloadedImages({
+      count: 30,
+      query: 'luxury apartment interior',
+      orientation: 'landscape',
+      filenamePrefix: 'seed-property',
+    }),
+  ]);
+
+  return { agentPhotos, landlordPhotos, propertyImages };
+}
+
+function imageFromPool(
+  pool: string[],
+  index: number,
+  fallback: string,
+): string {
+  return pool[index % pool.length] ?? fallback;
 }
 
 async function seedMany<T extends NamedRecord>(
@@ -372,7 +563,7 @@ async function seedLocations(): Promise<NamedRecord[]> {
   return records;
 }
 
-async function seedAgents(): Promise<NamedRecord[]> {
+async function seedAgents(imageAssets: SeedImageAssets): Promise<NamedRecord[]> {
   console.log('  → Seeding agents...');
   await prisma.agent.create({
     data: {
@@ -384,7 +575,11 @@ async function seedAgents(): Promise<NamedRecord[]> {
       countryCode: '+974',
       role: Role.ADMIN,
       isActive: true,
-      photo: faker.image.avatar(),
+      photo: imageFromPool(
+        imageAssets.agentPhotos,
+        0,
+        seededUploadPath('images', 'agent-admin.jpg'),
+      ),
     },
   });
 
@@ -401,7 +596,11 @@ async function seedAgents(): Promise<NamedRecord[]> {
           countryCode: '+974',
           role: Role.AGENT,
           isActive: faker.datatype.boolean(),
-          photo: faker.image.avatar(),
+          photo: imageFromPool(
+            imageAssets.agentPhotos,
+            i + 1,
+            seededUploadPath('images', `agent-${i + 1}.jpg`),
+          ),
         },
       }),
     ),
@@ -413,7 +612,7 @@ async function seedAgents(): Promise<NamedRecord[]> {
 }
 
 
-async function seedLandlords(): Promise<NamedRecord[]> {
+async function seedLandlords(imageAssets: SeedImageAssets): Promise<NamedRecord[]> {
   console.log('  → Seeding landlords...');
 
   const records = await Promise.all(
@@ -428,6 +627,13 @@ async function seedLandlords(): Promise<NamedRecord[]> {
             countryCode: '+974',
             mobile: faker.phone.number(),
             expiryDate: expiryDate, // TOUJOURS une date, jamais null
+            photo: faker.datatype.boolean(0.8)
+              ? imageFromPool(
+                  imageAssets.landlordPhotos,
+                  index,
+                  seededUploadPath('landlords', `photo-${index + 1}.jpg`),
+                )
+              : null,
 
             alternativeCountryCode: faker.datatype.boolean(0.3) ? '+974' : null,
             alternativeMobile: faker.datatype.boolean(0.3) ? faker.phone.number() : null,
@@ -438,9 +644,9 @@ async function seedLandlords(): Promise<NamedRecord[]> {
                 : 'https://maps.google.com/?q=Qatar', // Valeur par défaut
 
             // Toujours des chemins de fichiers valides
-            marketingAgreement: `/uploads/landlords/agreement-${index + 1}.pdf`,
-            draftContract: `/uploads/landlords/contract-${index + 1}.pdf`,
-          },
+            marketingAgreement: seededUploadPath('landlords', `agreement-${index + 1}.pdf`),
+            draftContract: seededUploadPath('landlords', `contract-${index + 1}.pdf`),
+          } as any,
         });
       }),
   );
@@ -459,6 +665,7 @@ async function seedProperties(ctx: {
   locationRecords: NamedRecord[];
   agents: NamedRecord[];
   landlordRecords: NamedRecord[];
+  imageAssets: SeedImageAssets;
 }): Promise<void> {
   console.log('  → Seeding properties...');
 
@@ -504,11 +711,26 @@ async function seedProperties(ctx: {
           hasFacilities: selectedFacilities.length > 0,
           details: faker.lorem.paragraph(),
           directions: faker.lorem.sentence(),
-          images: Array.from(
-            { length: faker.number.int({ min: 1, max: 4 }) },
-            () => faker.image.url(),
-          ),
-          document: faker.datatype.boolean() ? faker.internet.url() : null,
+          images:
+            ctx.imageAssets.propertyImages.length > 0
+              ? faker.helpers.arrayElements(
+                  ctx.imageAssets.propertyImages,
+                  faker.number.int({
+                    min: 1,
+                    max: Math.min(4, ctx.imageAssets.propertyImages.length),
+                  }),
+                )
+              : Array.from(
+                  { length: faker.number.int({ min: 1, max: 4 }) },
+                  (_, imageIndex) =>
+                    seededUploadPath(
+                      'properties',
+                      `property-${i + 1}-image-${imageIndex + 1}.jpg`,
+                    ),
+                ),
+          document: faker.datatype.boolean()
+            ? seededUploadPath('documents', `property-${i + 1}.pdf`)
+            : null,
           category: { connect: { id: randomCategory.id } },
           type: { connect: { id: randomType.id } },
           layout: { connect: { id: randomLayout.id } },
@@ -538,6 +760,7 @@ async function main(): Promise<void> {
   console.log('🌱 Seeding database...\n');
 
   await purge();
+  const imageAssets = await prepareSeedImageAssets();
 
   const { records: utilityRecords } = await seedMany(
     'utilities',
@@ -573,8 +796,8 @@ async function main(): Promise<void> {
   await seedCategoryFurnishingRelations(categoryRecords, furnishingRecords);
 
   const locationRecords = await seedLocations();
-  const agents = await seedAgents();
-  const landlordRecords = await seedLandlords();
+  const agents = await seedAgents(imageAssets);
+  const landlordRecords = await seedLandlords(imageAssets);
 
   await seedProperties({
     categoryRecords,
@@ -586,6 +809,7 @@ async function main(): Promise<void> {
     locationRecords,
     agents,
     landlordRecords,
+    imageAssets,
   });
 
   console.log('\n✅ Seeding complete!');

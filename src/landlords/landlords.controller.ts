@@ -30,6 +30,44 @@ import type { Request } from 'express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
 import { v4 as uuidv4 } from 'uuid';
+import { UPLOAD_CONSTANTS } from '../upload/constants/upload.constants';
+
+const landlordUploadOptions = {
+  storage: diskStorage({
+    destination: './uploads/landlords',
+    filename: (_req, file, cb) => {
+      const uniqueSuffix = uuidv4();
+      const ext = extname(file.originalname);
+      cb(null, `${file.fieldname}-${uniqueSuffix}${ext}`);
+    },
+  }),
+  fileFilter: (_req, file, cb) => {
+    const isPhoto = file.fieldname === 'photo';
+    const allowedMimes = isPhoto
+      ? UPLOAD_CONSTANTS.ALLOWED_IMAGE_MIMETYPES
+      : [
+          'application/pdf',
+          'application/msword',
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        ];
+
+    if (allowedMimes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(
+        new BadRequestException(
+          isPhoto
+            ? 'Type de photo non autorisé. Utilisez JPG, PNG, WEBP ou GIF'
+            : 'Type de fichier non autorisé. Utilisez PDF ou DOC',
+        ),
+        false,
+      );
+    }
+  },
+  limits: {
+    fileSize: 20 * 1024 * 1024,
+  },
+};
 
 @Controller('landlords')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -46,44 +84,17 @@ export class LandlordsController {
   @UseInterceptors(
     FileFieldsInterceptor(
       [
+        { name: 'photo', maxCount: 1 },
         { name: 'marketingAgreement', maxCount: 1 },
         { name: 'draftContract', maxCount: 1 },
       ],
-      {
-        storage: diskStorage({
-          destination: './uploads/landlords',
-          filename: (req, file, cb) => {
-            const uniqueSuffix = uuidv4();
-            const ext = extname(file.originalname);
-            cb(null, `${file.fieldname}-${uniqueSuffix}${ext}`);
-          },
-        }),
-        fileFilter: (req, file, cb) => {
-          const allowedMimes = [
-            'application/pdf',
-            'application/msword',
-            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-          ];
-          if (allowedMimes.includes(file.mimetype)) {
-            cb(null, true);
-          } else {
-            cb(
-              new BadRequestException(
-                'Type de fichier non autorisé. Utilisez PDF ou DOC',
-              ),
-              false,
-            );
-          }
-        },
-        limits: {
-          fileSize: 10 * 1024 * 1024, // 10MB
-        },
-      },
+      landlordUploadOptions,
     ),
   )
   async create(
     @UploadedFiles()
     files: {
+      photo?: Express.Multer.File[];
       marketingAgreement?: Express.Multer.File[];
       draftContract?: Express.Multer.File[];
     },
@@ -110,10 +121,14 @@ export class LandlordsController {
         files.draftContract[0],
         baseUrl,
       );
+      const photoUrl = files?.photo?.[0]
+        ? this.uploadService.getUrl(files.photo[0], baseUrl)
+        : undefined;
 
       // Créer l'objet avec les données + URLs des fichiers
       const landlordData: CreateLandlordDto = {
         ...createLandlordDto,
+        ...(photoUrl ? { photo: photoUrl } : {}),
         marketingAgreement: marketingUrl,
         draftContract: draftUrl,
       };
@@ -129,6 +144,7 @@ export class LandlordsController {
     } catch (error) {
       // En cas d'erreur, supprimer les fichiers uploadés
       this.uploadService.rollback([
+        ...(files?.photo?.[0] ? [files.photo[0]] : []),
         files.marketingAgreement[0],
         files.draftContract[0],
       ]);
@@ -179,16 +195,21 @@ export class LandlordsController {
   @Roles(Role.ADMIN, Role.AGENT)
   @HttpCode(HttpStatus.OK)
   @UseInterceptors(
-    FileFieldsInterceptor([
-      { name: 'marketingAgreement', maxCount: 1 },
-      { name: 'draftContract', maxCount: 1 },
-    ]),
+    FileFieldsInterceptor(
+      [
+        { name: 'photo', maxCount: 1 },
+        { name: 'marketingAgreement', maxCount: 1 },
+        { name: 'draftContract', maxCount: 1 },
+      ],
+      landlordUploadOptions,
+    ),
   )
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateLandlordDto: UpdateLandlordDto,
     @UploadedFiles()
     files: {
+      photo?: Express.Multer.File[];
       marketingAgreement?: Express.Multer.File[];
       draftContract?: Express.Multer.File[];
     },
@@ -201,6 +222,10 @@ export class LandlordsController {
       const updateData: any = { ...updateLandlordDto };
 
       // Traiter les nouveaux fichiers s'ils sont fournis
+      if (files?.photo?.[0]) {
+        updateData.photo = this.uploadService.getUrl(files.photo[0], baseUrl);
+      }
+
       if (files?.marketingAgreement?.[0]) {
         updateData.marketingAgreement = this.uploadService.getUrl(
           files.marketingAgreement[0],
@@ -220,6 +245,9 @@ export class LandlordsController {
       // En cas d'erreur, supprimer les nouveaux fichiers uploadés
       const filesToDelete: Express.Multer.File[] = [];
 
+      if (files?.photo?.[0]) {
+        filesToDelete.push(files.photo[0]);
+      }
       if (files?.marketingAgreement?.[0]) {
         filesToDelete.push(files.marketingAgreement[0]);
       }
@@ -241,7 +269,7 @@ export class LandlordsController {
   @HttpCode(HttpStatus.OK)
   async remove(@Param('id', ParseIntPipe) id: number) {
     // Récupérer le landlord pour avoir les chemins des fichiers
-    const landlord = await this.landlordsService.findOne(id);
+    const landlord: any = await this.landlordsService.findOne(id);
 
     // Supprimer le landlord
     const result = await this.landlordsService.remove(id);
@@ -259,6 +287,15 @@ export class LandlordsController {
         console.log(
           'Erreur lors de la suppression du fichier marketingAgreement',
         );
+      }
+    }
+
+    if (landlord.photo) {
+      try {
+        const filePath = landlord.photo.replace(/^.*\/uploads/, './uploads');
+        this.uploadService.deleteFile(filePath);
+      } catch (e) {
+        console.log('Erreur lors de la suppression de la photo du landlord');
       }
     }
 

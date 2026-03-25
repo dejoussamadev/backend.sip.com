@@ -6,6 +6,7 @@ model Landlord {
   email                  String
   countryCode            String   @default("+974")
   mobile                 String
+  photo                  String?
   alternativeCountryCode String?
   alternativeMobile      String?
   note                   String?

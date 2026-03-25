@@ -34,7 +34,10 @@ export class PropertiesController {
   create(
     @Body() dto: CreatePropertyDto,
     @UploadedFiles()
-    files: { images?: Express.Multer.File[]; documents?: Express.Multer.File[] },
+    files: {
+      images?: Express.Multer.File[];
+      documents?: Express.Multer.File[];
+    },
     @Req() req: Request,
   ) {
     if (files?.images?.length) {
