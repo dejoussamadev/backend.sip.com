@@ -1,6 +1,7 @@
 import {
   Controller, Get, Post, Body, Patch, Param, Delete,
   UseGuards, ParseIntPipe, HttpCode, HttpStatus,
+  Query,
 } from '@nestjs/common';
 import { CategoriesService } from './categories.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
@@ -24,8 +25,19 @@ export class CategoriesController {
 
   @Get()
   @Roles(Role.ADMIN, Role.AGENT)
-  findAll() {
-    return this.categoriesService.findAll();
+  findAll(
+    @Query('with_pagination') withPagination?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('search') search?: string,
+  ) {
+    const paginate = withPagination === 'true';
+    return this.categoriesService.findAll({
+      paginate,
+      page: page ? parseInt(page, 10) : 1,
+      limit: limit ? parseInt(limit, 10) : 10,
+      search: search?.trim() || undefined,
+    });
   }
 
   @Get('count')

@@ -11,11 +11,56 @@ export class FurnishingsService {
     return this.prisma.furnishing.create({ data: dto });
   }
 
-  findAll() {
-    return this.prisma.furnishing.findMany({
-      include: { categories: { include: { category: true } } },
-      orderBy: { name: 'asc' },
+  async findAll(options: {
+    paginate: boolean;
+    page: number;
+    limit: number;
+    search?: string;
+  }) {
+    const { paginate, page, limit, search } = options;
+
+    const where = search
+      ? { OR: [{ name: { contains: search, mode: 'insensitive' as const } }] }
+      : {};
+    const include = {
+      categories: { include: { category: true } },
+      _count: { select: { properties: true } },
+    };
+    const mapFurnishing = ({ _count, ...furnishing }: any) => ({
+      ...furnishing,
+      propertiesCount: _count.properties,
     });
+
+    if (!paginate) {
+      const data = await this.prisma.furnishing.findMany({
+        where,
+        include,
+        orderBy: { name: 'asc' },
+      });
+      return data.map(mapFurnishing);
+    }
+
+    const skip = (page - 1) * limit;
+    const [data, total] = await this.prisma.$transaction([
+      this.prisma.furnishing.findMany({
+        where,
+        include,
+        orderBy: { id: 'desc' },
+        skip,
+        take: limit,
+      }),
+      this.prisma.furnishing.count({ where }),
+    ]);
+
+    return {
+      data: data.map(mapFurnishing),
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
   }
 
   async findOne(id: number) {

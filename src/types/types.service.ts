@@ -11,14 +11,57 @@ export class TypesService {
     return this.prisma.type.create({ data: dto });
   }
 
-  findAll() {
-    return this.prisma.type.findMany({
-      include: {
-        categories: { include: { category: true } },
-        layouts: { include: { layout: true } },
-      },
-      orderBy: { name: 'asc' },
+  async findAll(options: {
+    paginate: boolean;
+    page: number;
+    limit: number;
+    search?: string;
+  }) {
+    const { paginate, page, limit, search } = options;
+
+    const where = search
+      ? { OR: [{ name: { contains: search, mode: 'insensitive' as const } }] }
+      : {};
+    const include = {
+      categories: { include: { category: true } },
+      layouts: { include: { layout: true } },
+      _count: { select: { properties: true } },
+    };
+    const mapType = ({ _count, ...type }: any) => ({
+      ...type,
+      propertiesCount: _count.properties,
     });
+
+    if (!paginate) {
+      const data = await this.prisma.type.findMany({
+        where,
+        include,
+        orderBy: { name: 'asc' },
+      });
+      return data.map(mapType);
+    }
+
+    const skip = (page - 1) * limit;
+    const [data, total] = await this.prisma.$transaction([
+      this.prisma.type.findMany({
+        where,
+        include,
+        orderBy: { id: 'desc' },
+        skip,
+        take: limit,
+      }),
+      this.prisma.type.count({ where }),
+    ]);
+
+    return {
+      data: data.map(mapType),
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
   }
 
   async findOne(id: number) {
@@ -71,12 +114,10 @@ export class TypesService {
 
   // Récupérer les categories d'un type
   async findTypesByCategory(id: number) {
-    console.log('hello');
     const categoryTypes = await this.prisma.categoryType.findMany({
       where: { categoryId: id },
       include: { type: true },
     });
-    console.log(categoryTypes);
     return categoryTypes.map((ct) => ct.type);
   }
 

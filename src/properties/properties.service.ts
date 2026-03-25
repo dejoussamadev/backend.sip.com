@@ -12,7 +12,7 @@ import {
 } from './constants/property.options';
 import { generateRef } from './utils/ref.generator';
 import { PropertyCategory, PropertyType } from './constants/property.enums';
-import { PropertyStatus } from '@prisma/client';
+import { Prisma, PropertyStatus } from '@prisma/client';
 import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
@@ -162,10 +162,14 @@ export class PropertiesService {
   async findAll(filters: any = {}) {
     const {
       status,
+      type,
+      category,
+      locationCode,
       agentId,
       landlordId,
       minPrice,
       maxPrice,
+      bedrooms,
       bathrooms,
       page = '1',
       limit = '10',
@@ -174,14 +178,45 @@ export class PropertiesService {
     const take = Number(limit);
     const skip = (Number(page) - 1) * take;
 
-    const where = {
+    const where: Prisma.PropertyWhereInput = {
       status: status || undefined,
+      type: type
+        ? {
+            is: {
+              name: {
+                equals: type,
+                mode: Prisma.QueryMode.insensitive,
+              },
+            },
+          }
+        : undefined,
+      category: category
+        ? {
+            is: {
+              name: {
+                equals: category,
+                mode: Prisma.QueryMode.insensitive,
+              },
+            },
+          }
+        : undefined,
+      location: locationCode
+        ? {
+            is: {
+              name: {
+                contains: locationCode,
+                mode: Prisma.QueryMode.insensitive,
+              },
+            },
+          }
+        : undefined,
       agentId: agentId ? Number(agentId) : undefined,
       landlordId: landlordId ? Number(landlordId) : undefined,
       range: {
         gte: minPrice ? Number(minPrice) : undefined,
         lte: maxPrice ? Number(maxPrice) : undefined,
       },
+      // The current Property model has no bedrooms column yet, so this filter cannot be applied here.
       bathrooms: bathrooms ? Number(bathrooms) : undefined,
     };
 
@@ -294,17 +329,46 @@ export class PropertiesService {
     return updated;
   }
 
-  async advancedSearch(filters: Record<string, string>) {
+  async advancedSearch(filters: Record<string, any>) {
     const where: any = {};
 
-    if (filters.maidRoom)
-      where.maidRoom = filters.maidRoom === 'true' || filters.maidRoom === '1';
+    if (filters.keyword) {
+      where.OR = [
+        { name: { contains: filters.keyword, mode: 'insensitive' } },
+        { referenceNumber: { contains: filters.keyword, mode: 'insensitive' } },
+        { details: { contains: filters.keyword, mode: 'insensitive' } },
+        { directions: { contains: filters.keyword, mode: 'insensitive' } },
+      ];
+    }
+
+    if (filters.categoryId) where.categoryId = Number(filters.categoryId);
+    if (filters.typeId) where.typeId = Number(filters.typeId);
+    if (filters.layoutId) where.layoutId = Number(filters.layoutId);
+    if (filters.locationId) where.locationId = Number(filters.locationId);
+    if (filters.furnishingId) where.furnishingId = Number(filters.furnishingId);
+
+    if (filters.maidRoom !== undefined && filters.maidRoom !== null)
+      where.maidRoom = filters.maidRoom === true || filters.maidRoom === 'true' || filters.maidRoom === '1';
+    if (filters.shortTerm !== undefined && filters.shortTerm !== null)
+      where.shortTerm = filters.shortTerm === true || filters.shortTerm === 'true' || filters.shortTerm === '1';
+    if (filters.utilitiesIncluded !== undefined && filters.utilitiesIncluded !== null)
+      where.hasUtilities =
+        filters.utilitiesIncluded === true ||
+        filters.utilitiesIncluded === 'true' ||
+        filters.utilitiesIncluded === '1';
     if (filters.status) where.status = filters.status;
-    if (filters.bathroom) where.bathrooms = Number(filters.bathroom);
+    if (filters.bathrooms) where.bathrooms = Number(filters.bathrooms);
     if (filters.balcony) where.balcony = filters.balcony;
     if (filters.view) where.view = filters.view;
-    if (filters.agent) where.agentId = Number(filters.agent);
-    if (filters.landlord) where.landlordId = Number(filters.landlord);
+    if (filters.agentId) where.agentId = Number(filters.agentId);
+    if (filters.landlordId) where.landlordId = Number(filters.landlordId);
+    if (filters.facilityId) {
+      where.facilities = {
+        some: {
+          facilityId: Number(filters.facilityId),
+        },
+      };
+    }
 
     // Recherche sur les montants (range)
     if (filters.minAmount || filters.maxAmount) {
@@ -320,20 +384,38 @@ export class PropertiesService {
       if (filters.maxSize) where.size.lte = Number(filters.maxSize);
     }
 
-    return this.prisma.property.findMany({
-      where,
-      orderBy: { updatedAt: 'desc' },
-      take: filters.take ? Number(filters.take) : 100,
-      skip: filters.skip ? Number(filters.skip) : 0,
-      include: {
-        category: true,
-        type: true,
-        layout: true,
-        location: true,
-        agent: true,
-        landlord: true,
+    const take = filters.take ? Number(filters.take) : 10;
+    const skip = filters.skip ? Number(filters.skip) : 0;
+
+    const include = {
+      category: true,
+      type: true,
+      layout: true,
+      location: true,
+      agent: true,
+      landlord: true,
+    };
+
+    const [data, total] = await Promise.all([
+      this.prisma.property.findMany({
+        where,
+        orderBy: { updatedAt: 'desc' },
+        take,
+        skip,
+        include,
+      }),
+      this.prisma.property.count({ where }),
+    ]);
+
+    return {
+      data,
+      meta: {
+        total,
+        page: Math.floor(skip / take) + 1,
+        limit: take,
+        totalPages: Math.ceil(total / take),
       },
-    });
+    };
   }
 
   async remove(id: number) {

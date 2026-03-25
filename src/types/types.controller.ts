@@ -1,6 +1,7 @@
 import {
   Controller, Get, Post, Body, Patch, Param, Delete,
   UseGuards, ParseIntPipe, HttpCode, HttpStatus,
+  Query,
 } from '@nestjs/common';
 import { TypesService } from './types.service';
 import { CreateTypeDto } from './dto/create-type.dto';
@@ -24,8 +25,19 @@ export class TypesController {
 
   @Get()
   @Roles(Role.ADMIN, Role.AGENT)
-  findAll() {
-    return this.typesService.findAll();
+  findAll(
+    @Query('with_pagination') withPagination?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('search') search?: string,
+  ) {
+    const paginate = withPagination === 'true';
+    return this.typesService.findAll({
+      paginate,
+      page: page ? parseInt(page, 10) : 1,
+      limit: limit ? parseInt(limit, 10) : 10,
+      search: search?.trim() || undefined,
+    });
   }
 
   @Get('count')
@@ -71,7 +83,6 @@ export class TypesController {
   @Get('by-category/:id')
   @Roles(Role.ADMIN, Role.AGENT)
   findCategories(@Param('id', ParseIntPipe) id: number) {
-    console.log('TRAH');
     return this.typesService.findTypesByCategory(id);
   }
 }

@@ -29,6 +29,10 @@ export class CreateLandlordDto {
 
   @IsString()
   @IsOptional()
+  photo?: string;
+
+  @IsString()
+  @IsOptional()
   alternativeCountryCode?: string;
 
   @IsString()

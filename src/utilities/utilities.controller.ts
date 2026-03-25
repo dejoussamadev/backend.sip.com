@@ -1,6 +1,7 @@
 import {
   Controller, Get, Post, Body, Patch, Param, Delete,
   UseGuards, ParseIntPipe, HttpCode, HttpStatus,
+  Query,
 } from '@nestjs/common';
 import { UtilitiesService } from './utilities.service';
 import { CreateUtilityDto } from './dto/create-utility.dto';
@@ -24,8 +25,19 @@ export class UtilitiesController {
 
   @Get()
   @Roles(Role.ADMIN, Role.AGENT)
-  findAll() {
-    return this.utilitiesService.findAll();
+  findAll(
+    @Query('with_pagination') withPagination?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('search') search?: string,
+  ) {
+    const paginate = withPagination === 'true';
+    return this.utilitiesService.findAll({
+      paginate,
+      page: page ? parseInt(page, 10) : 1,
+      limit: limit ? parseInt(limit, 10) : 10,
+      search: search?.trim() || undefined,
+    });
   }
 
   @Get('count')

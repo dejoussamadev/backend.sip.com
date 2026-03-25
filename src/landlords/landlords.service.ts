@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException, Logger, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  Logger,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateLandlordDto } from './dto/create-landlord.dto';
 import { UpdateLandlordDto } from './dto/update-landlord.dto';
@@ -13,7 +18,9 @@ export class LandlordsService {
   async create(dto: CreateLandlordDto) {
     const { expiryDate, marketingAgreement, draftContract, ...rest } = dto;
     if (!marketingAgreement || !draftContract) {
-      throw new BadRequestException('Les fichiers marketingAgreement et draftContract sont requis');
+      throw new BadRequestException(
+        'Les fichiers marketingAgreement et draftContract sont requis',
+      );
     }
 
     const landlord = await this.prisma.landlord.create({
@@ -38,8 +45,8 @@ export class LandlordsService {
     const { paginate, page, limit, search } = options;
 
     const where = search
-        ? { OR: [{ name: { contains: search, mode: 'insensitive' as const } }] }
-        : {};
+      ? { OR: [{ name: { contains: search, mode: 'insensitive' as const } }] }
+      : {};
 
     const include = {
       _count: { select: { properties: true } },
@@ -117,7 +124,7 @@ export class LandlordsService {
 
     const landlord = await this.prisma.landlord.update({
       where: { id },
-      data,
+      data: data as any,
     });
 
     this.logger.log(`Landlord mis à jour: ID ${id}`);

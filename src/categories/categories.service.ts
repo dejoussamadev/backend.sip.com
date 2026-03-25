@@ -11,14 +11,57 @@ export class CategoriesService {
     return this.prisma.category.create({ data: dto });
   }
 
-  findAll() {
-    return this.prisma.category.findMany({
-      include: {
-        types: { include: { type: true } },
-        furnishings: { include: { furnishing: true } },
-      },
-      orderBy: { name: 'asc' },
+  async findAll(options: {
+    paginate: boolean;
+    page: number;
+    limit: number;
+    search?: string;
+  }) {
+    const { paginate, page, limit, search } = options;
+
+    const where = search
+      ? { OR: [{ name: { contains: search, mode: 'insensitive' as const } }] }
+      : {};
+    const include = {
+      types: { include: { type: true } },
+      furnishings: { include: { furnishing: true } },
+      _count: { select: { properties: true } },
+    };
+    const mapCategory = ({ _count, ...category }: any) => ({
+      ...category,
+      propertiesCount: _count.properties,
     });
+
+    if (!paginate) {
+      const data = await this.prisma.category.findMany({
+        where,
+        include,
+        orderBy: { name: 'asc' },
+      });
+      return data.map(mapCategory);
+    }
+
+    const skip = (page - 1) * limit;
+    const [data, total] = await this.prisma.$transaction([
+      this.prisma.category.findMany({
+        where,
+        include,
+        orderBy: { id: 'desc' },
+        skip,
+        take: limit,
+      }),
+      this.prisma.category.count({ where }),
+    ]);
+
+    return {
+      data: data.map(mapCategory),
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
   }
 
   async findOne(id: number) {
