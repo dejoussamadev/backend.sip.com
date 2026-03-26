@@ -329,7 +329,80 @@ export class PropertiesService {
     return updated;
   }
 
+<<<<<<< Updated upstream
   async advancedSearch(filters: Record<string, any>) {
+=======
+  async replace(id: number, dto: CreatePropertyDto, agentName: string = 'Unknown') {
+    const current = await this.findOne(id);
+
+    if (dto.category && dto.type) {
+      this.validateDependencies(dto.category, dto.type, dto.layout);
+    }
+    this.normalizeRules(dto);
+
+    const referenceNumber = dto.refNo?.trim()
+      ? dto.refNo.trim()
+      : (current as any).referenceNumber;
+
+    const agentId = dto.agentId ? Number(dto.agentId) : undefined;
+    const landlordId = dto.landlordId ? Number(dto.landlordId) : undefined;
+    const categoryId = dto.categoryId ? Number(dto.categoryId) : undefined;
+    const typeId = dto.typeId ? Number(dto.typeId) : undefined;
+    const layoutId = dto.layoutId ? Number(dto.layoutId) : undefined;
+    const locationId = dto.locationId ? Number(dto.locationId) : undefined;
+    const furnishingId = dto.furnishingId ? Number(dto.furnishingId) : undefined;
+
+    const updateData: any = {
+      referenceNumber,
+      name: dto.name,
+      shortTerm: dto.shortTerm ?? false,
+      unitNumber: dto.unitNo ?? null,
+      bathrooms: dto.bathrooms ?? 0,
+      size: dto.sizeSqm ?? 0,
+      maidRoom: dto.maidRoom ?? false,
+      balcony: dto.balcony ?? '',
+      view: dto.view ?? null,
+      range: dto.price ?? 0,
+      commission: dto.commissionPct ?? 0,
+      status: (current as any).status,
+      expirationDate: dto.expiryDate
+        ? typeof dto.expiryDate === 'string'
+          ? new Date(dto.expiryDate)
+          : dto.expiryDate instanceof Date
+          ? dto.expiryDate
+          : new Date(String(dto.expiryDate))
+        : (current as any).expirationDate,
+      access: dto.access ?? null,
+      hasUtilities: dto.utilitiesIncluded ?? false,
+      hasFacilities: dto.facilitiesEnabled ?? false,
+      details: dto.propertyDetails ?? '',
+      directions: dto.propertyNotes ?? '',
+      images: dto.imageUrls ?? [],
+      document: dto.documents?.[0] ?? null,
+      categoryId,
+      typeId,
+      layoutId,
+      locationId,
+      furnishingId,
+      agentId,
+      landlordId,
+    };
+
+    const updated = await this.prisma.property.update({
+      where: { id },
+      data: updateData,
+    });
+
+    await this.notificationsService.notifyPropertyUpdated(
+      updated.referenceNumber,
+      agentName,
+    );
+
+    return updated;
+  }
+
+  async advancedSearch(filters: Record<string, string>) {
+>>>>>>> Stashed changes
     const where: any = {};
 
     if (filters.keyword) {

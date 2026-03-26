@@ -12,6 +12,7 @@ import {
   UseGuards,
   UseInterceptors,
   UploadedFiles,
+  Put,
 } from '@nestjs/common';
 import type { Request } from 'express';
 import { PropertiesService } from './properties.service';
@@ -28,6 +29,18 @@ import { PropertyFilesInterceptor } from '../upload/interceptors/file-upload.int
 export class PropertiesController {
   constructor(private readonly propertiesService: PropertiesService) {}
 
+  private applyUploadedFiles(
+    dto: CreatePropertyDto | UpdatePropertyDto,
+    files?: { images?: Express.Multer.File[]; documents?: Express.Multer.File[] },
+  ) {
+    if (files?.images?.length) {
+      dto.imageUrls = files.images.map((f) => f.path);
+    }
+    if (files?.documents?.length) {
+      dto.documents = files.documents.map((f) => f.path);
+    }
+  }
+
   @Post()
   @Roles(Role.ADMIN, Role.AGENT)
   @UseInterceptors(PropertyFilesInterceptor('images', 'documents'))
@@ -40,12 +53,7 @@ export class PropertiesController {
     },
     @Req() req: Request,
   ) {
-    if (files?.images?.length) {
-      dto.imageUrls = files.images.map((f) => f.path);
-    }
-    if (files?.documents?.length) {
-      dto.documents = files.documents.map((f) => f.path);
-    }
+    this.applyUploadedFiles(dto, files);
     const agentName = (req.user as any)?.name ?? 'Unknown';
     return this.propertiesService.create(dto, agentName);
   }
@@ -100,14 +108,24 @@ export class PropertiesController {
     files: { images?: Express.Multer.File[]; documents?: Express.Multer.File[] },
     @Req() req: Request,
   ) {
-    if (files?.images?.length) {
-      dto.imageUrls = files.images.map((f) => f.path);
-    }
-    if (files?.documents?.length) {
-      dto.documents = files.documents.map((f) => f.path);
-    }
+    this.applyUploadedFiles(dto, files);
     const agentName = (req.user as any)?.name ?? 'Unknown';
     return this.propertiesService.update(id, dto, agentName);
+  }
+
+  @Put(':id')
+  @Roles(Role.ADMIN, Role.AGENT)
+  @UseInterceptors(PropertyFilesInterceptor('images', 'documents'))
+  replace(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: CreatePropertyDto,
+    @UploadedFiles()
+    files: { images?: Express.Multer.File[]; documents?: Express.Multer.File[] },
+    @Req() req: Request,
+  ) {
+    this.applyUploadedFiles(dto, files);
+    const agentName = (req.user as any)?.name ?? 'Unknown';
+    return this.propertiesService.replace(id, dto, agentName);
   }
 
   @Delete(':id')
