@@ -294,6 +294,7 @@ export class PropertiesService {
         if (dto.price !== undefined) updateData.range = dto.price;
         if (dto.commissionPct !== undefined)
             updateData.commission = dto.commissionPct;
+        if (dto.status !== undefined) updateData.status = dto.status;
         if (dto.access !== undefined) updateData.access = dto.access;
         if (dto.utilitiesIncluded !== undefined)
             updateData.hasUtilities = dto.utilitiesIncluded;

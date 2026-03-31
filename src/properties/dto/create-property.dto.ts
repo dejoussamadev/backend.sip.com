@@ -1,9 +1,9 @@
 import { IsString, IsOptional, IsNumber, IsInt, IsBoolean, IsArray, IsEnum, Min, Max, MinDate } from 'class-validator';
 import {
   PropertyCategory, PropertyType, PropertyLayout,
-  BalconyOption, StatusOption, AccessOption, FurnishingOption,
+  BalconyOption, FurnishingOption,
 } from '../constants/property.enums';
-import { PropertyAccess, PropertyView } from '@prisma/client';
+import { PropertyAccess, PropertyStatus, PropertyView } from '@prisma/client';
 
 export class CreatePropertyDto {
   @IsOptional() @IsString() refNo?: string; // généré si absent
@@ -29,7 +29,7 @@ export class CreatePropertyDto {
   @IsOptional() @IsString() currency?: string;
   @IsOptional() @IsNumber() @Min(0) @Max(100) commissionPct?: number;
 
-  @IsOptional() @IsEnum(StatusOption) status?: StatusOption;
+  @IsOptional() @IsEnum(PropertyStatus) status?: PropertyStatus;
   @IsOptional() @MinDate(new Date()) expiryDate?: Date;
 
   @IsOptional() @IsEnum(PropertyAccess) access?: PropertyAccess;
