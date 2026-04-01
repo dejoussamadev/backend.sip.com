@@ -54,8 +54,14 @@ export class PropertiesController {
     @Req() req: Request,
   ) {
     this.applyUploadedFiles(dto, files);
-    const agentName = (req.user as any)?.name ?? 'Unknown';
-    return this.propertiesService.create(dto, agentName);
+    const user = req.user as any;
+    const agentName = user?.name ?? 'Unknown';
+    const userRole = user?.role as Role | undefined;
+    if (userRole === Role.AGENT) {
+      // Les agents ne peuvent pas forcer le statut
+      delete dto.status;
+    }
+    return this.propertiesService.create(dto, agentName, userRole);
   }
   @Post('filter')
   async filterProperties(@Body() filters: Record<string, any>) {
@@ -99,7 +105,7 @@ export class PropertiesController {
   }
 
   @Patch(':id')
-  @Roles(Role.ADMIN, Role.AGENT)
+  @Roles(Role.ADMIN)
   @UseInterceptors(PropertyFilesInterceptor('images', 'documents'))
   update(
     @Param('id', ParseIntPipe) id: number,
@@ -114,7 +120,7 @@ export class PropertiesController {
   }
 
   @Put(':id')
-  @Roles(Role.ADMIN, Role.AGENT)
+  @Roles(Role.ADMIN)
   @UseInterceptors(PropertyFilesInterceptor('images', 'documents'))
   replace(
     @Param('id', ParseIntPipe) id: number,
