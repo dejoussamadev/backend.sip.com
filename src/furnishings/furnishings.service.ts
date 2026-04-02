@@ -92,7 +92,7 @@ export class FurnishingsService {
         type: true,
         layout: true,
         location: true,
-        agent: true,
+        user: true,
         landlord: true,
       },
       orderBy: { updatedAt: 'desc' },

@@ -10,7 +10,7 @@ model PropertyFacility {
   propertyId Int
   facilityId Int
 
-  property Property @relation(fields: [propertyId], references: [id])
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
   facility Facility @relation(fields: [facilityId], references: [id])
 
   @@id([propertyId, facilityId])

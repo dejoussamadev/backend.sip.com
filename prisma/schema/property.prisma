@@ -69,8 +69,8 @@ model Property {
   landlordId Int
   landlord   Landlord @relation(fields: [landlordId], references: [id])
 
-  agentId Int
-  agent   Agent @relation(fields: [agentId], references: [id])
+  userId Int
+  user   User @relation(fields: [userId], references: [id])
 
   utilities  PropertyUtility[]
   facilities PropertyFacility[]
@@ -82,6 +82,6 @@ model Property {
   @@index([typeId])
   @@index([layoutId])
   @@index([locationId])
-  @@index([agentId])
+  @@index([userId])
   @@map("properties")
 }

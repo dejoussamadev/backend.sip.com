@@ -83,7 +83,7 @@ export class LocationsService {
     await this.findOne(id);
     return this.prisma.property.findMany({
       where: { locationId: id },
-      include: { category: true, type: true, layout: true, agent: true, landlord: true },
+      include: { category: true, type: true, layout: true, user: true, landlord: true },
       orderBy: { updatedAt: 'desc' },
     });
   }

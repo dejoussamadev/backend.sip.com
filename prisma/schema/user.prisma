@@ -3,7 +3,7 @@ enum Role {
   ADMIN
 }
 
-model Agent {
+model User {
   id                  Int      @id @default(autoincrement())
   name                String
   agentCode           String   @unique
@@ -22,5 +22,5 @@ model Agent {
 
   properties Property[]
 
-  @@map("agents")
+  @@map("users")
 }

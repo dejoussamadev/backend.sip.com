@@ -3,7 +3,6 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
-import { AgentsModule } from './agents/agents.module';
 import { PropertiesModule } from './properties/properties.module';
 import { LandlordsModule } from './landlords/landlords.module';
 import { CategoriesModule } from './categories/categories.module';
@@ -15,13 +14,14 @@ import { FacilitiesModule } from './facilities/facilities.module';
 import { UtilitiesModule } from './utilities/utilities.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { UploadModule } from './upload/upload.module';
+import {UsersModule} from "./agents/users.module";
 
 
 @Module({
   imports: [
     PrismaModule,
     AuthModule,
-    AgentsModule,
+    UsersModule,
     PropertiesModule,
     LandlordsModule,
     CategoriesModule,
@@ -33,7 +33,6 @@ import { UploadModule } from './upload/upload.module';
     UtilitiesModule,
     NotificationsModule,
     UploadModule,
-
   ],
   controllers: [AppController],
   providers: [AppService],
