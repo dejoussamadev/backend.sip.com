@@ -49,7 +49,7 @@ export class NotificationsService {
     status?: string;
   }) {
     // Get all admins from the Agent table
-    const admins = await this.prisma.agent.findMany({
+    const admins = await this.prisma.user.findMany({
       where: {
         role: Role.ADMIN,
         isActive: true,

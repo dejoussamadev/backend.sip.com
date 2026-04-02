@@ -90,7 +90,7 @@ export class UtilitiesService {
             type: true,
             layout: true,
             location: true,
-            agent: true,
+            user: true,
             landlord: true,
           },
         },

@@ -23,7 +23,7 @@ export class AuthService {
     const email = loginDto.email.toLowerCase().trim();
 
     // 1. Trouver l'agent par email
-    const agent = await this.prisma.agent.findUnique({
+    const agent = await this.prisma.user.findUnique({
       where: { email },
     });
 
@@ -75,7 +75,7 @@ export class AuthService {
   }
 
   async getProfile(userId: number) {
-    const agent = await this.prisma.agent.findUnique({
+    const agent = await this.prisma.user.findUnique({
       where: { id: Number(userId) },
       select: {
         id: true,

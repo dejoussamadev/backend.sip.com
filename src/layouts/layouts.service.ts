@@ -92,7 +92,7 @@ export class LayoutsService {
         category: true,
         type: true,
         location: true,
-        agent: true,
+        user: true,
         landlord: true,
       },
       orderBy: { updatedAt: 'desc' },

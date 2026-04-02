@@ -136,7 +136,7 @@ export class PropertiesService {
                     dto.typeId ? Number(dto.typeId) : 0,
                 );
 
-        const agentId = dto.agentId ? Number(dto.agentId) : undefined;
+        const userId = dto.agentId ? Number(dto.agentId) : undefined;
         const landlordId = dto.landlordId ? Number(dto.landlordId) : undefined;
         const categoryId = dto.categoryId ? Number(dto.categoryId) : undefined;
         const typeId = dto.typeId ? Number(dto.typeId) : undefined;
@@ -179,7 +179,7 @@ export class PropertiesService {
                 layoutId: layoutId,
                 locationId: locationId,
                 furnishingId: furnishingId,
-                agentId: agentId,
+                userId: userId,
                 landlordId: landlordId,
             } as any,
         });
@@ -250,7 +250,7 @@ export class PropertiesService {
                     },
                 }
                 : undefined,
-            agentId: agentId ? Number(agentId) : undefined,
+            userId: agentId ? Number(agentId) : undefined,
             landlordId: landlordId ? Number(landlordId) : undefined,
             range: {
                 gte: minPrice ? Number(minPrice) : undefined,
@@ -265,7 +265,7 @@ export class PropertiesService {
             type: true,
             layout: true,
             location: true,
-            agent: true,
+            user: true,
             landlord: true,
         };
 
@@ -293,19 +293,45 @@ export class PropertiesService {
 
     async findOne(id: number) {
         const property = await this.prisma.property.findUnique({
-            where: {id},
+            where: { id },
             include: {
                 category: true,
                 type: true,
                 layout: true,
                 location: true,
                 furnishing: true,
-                agent: true,
+                user: true,
                 landlord: true,
+                facilities: {
+                    include: {
+                        facility: true,
+                    },
+                },
+                utilities: {
+                    include: {
+                        utility: true,
+                    },
+                },
             },
         });
-        if (!property) throw new NotFoundException('Property not found');
-        return property;
+
+        if (!property) {
+            throw new NotFoundException('Property not found');
+        }
+
+        return {
+            ...property,
+
+            utilities: property.utilities.map(u => ({
+                id: u.utility.id,
+                name: u.utility.name,
+            })),
+
+            facilities: property.facilities.map(f => ({
+                id: f.facility.id,
+                name: f.facility.name,
+            })),
+        };
     }
 
     async update(id: number, dto: UpdatePropertyDto, agentName: string = 'Unknown') {
@@ -351,7 +377,7 @@ export class PropertiesService {
                     : dto.expiryDate instanceof Date
                         ? dto.expiryDate
                         : new Date(String(dto.expiryDate));
-        if (dto.agentId) updateData.agentId = Number(dto.agentId);
+        if (dto.agentId) updateData.userId = Number(dto.agentId);
         if (dto.landlordId) updateData.landlordId = Number(dto.landlordId);
         if (dto.categoryId) updateData.categoryId = Number(dto.categoryId);
         if (dto.typeId) updateData.typeId = Number(dto.typeId);
@@ -383,7 +409,7 @@ export class PropertiesService {
             ? dto.refNo.trim()
             : (current as any).referenceNumber;
 
-        const agentId = dto.agentId ? Number(dto.agentId) : undefined;
+        const userId = dto.agentId ? Number(dto.agentId) : undefined;
         const landlordId = dto.landlordId ? Number(dto.landlordId) : undefined;
         const categoryId = dto.categoryId ? Number(dto.categoryId) : undefined;
         const typeId = dto.typeId ? Number(dto.typeId) : undefined;
@@ -425,7 +451,7 @@ export class PropertiesService {
             layoutId,
             locationId,
             furnishingId,
-            agentId,
+            userId,
             landlordId,
         };
 
@@ -473,7 +499,7 @@ export class PropertiesService {
         if (filters.bathrooms) where.bathrooms = Number(filters.bathrooms);
         if (filters.balcony) where.balcony = filters.balcony;
         if (filters.view) where.view = filters.view;
-        if (filters.agentId) where.agentId = Number(filters.agentId);
+        if (filters.agentId) where.userId = Number(filters.agentId);
         if (filters.landlordId) where.landlordId = Number(filters.landlordId);
         if (filters.facilityId) {
             where.facilities = {
@@ -505,7 +531,7 @@ export class PropertiesService {
             type: true,
             layout: true,
             location: true,
-            agent: true,
+            user: true,
             landlord: true,
         };
 
@@ -551,7 +577,7 @@ export class PropertiesService {
 
     // Agents pour le dropdown
     async getAgents() {
-        return this.prisma.agent.findMany({
+        return this.prisma.user.findMany({
             where: {isActive: true},
             select: {
                 id: true,

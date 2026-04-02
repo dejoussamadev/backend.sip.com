@@ -95,7 +95,7 @@ export class TypesService {
         category: true,
         layout: true,
         location: true,
-        agent: true,
+        user: true,
         landlord: true,
       },
       orderBy: { updatedAt: 'desc' },
