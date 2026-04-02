@@ -21,6 +21,9 @@ model User {
   updatedAt           DateTime @updatedAt
 
   properties Property[]
+  trustedDevices      TrustedDevice[]
+  loginRequests       LoginRequest[] @relation("UserLoginRequests")
+  reviewedLoginRequests LoginRequest[] @relation("LoginRequestReviewer")
 
   @@map("users")
 }

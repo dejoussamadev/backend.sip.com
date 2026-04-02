@@ -6,12 +6,16 @@ import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { PrismaModule } from '../prisma/prisma.module';
 import { JwtStrategy } from './strategies/jwt.strategy';
+import { LoginRequestsModule } from '../login-requests/login-requests.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 const jwtExpiration = (process.env.JWT_EXPIRATION || '7d') as StringValue;
 
 @Module({
   imports: [
     PrismaModule,
+    LoginRequestsModule,
+    NotificationsModule,
     PassportModule,
     JwtModule.register({
       global: true,

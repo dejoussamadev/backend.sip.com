@@ -1,4 +1,4 @@
-import { IsEmail, IsNotEmpty, IsString, MinLength } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsOptional, IsString, MinLength } from 'class-validator';
 import { Transform } from 'class-transformer';
 
 export class LoginDto {
@@ -11,4 +11,24 @@ export class LoginDto {
   @IsNotEmpty({ message: 'Le mot de passe est requis' })
   @MinLength(6, { message: 'Le mot de passe doit contenir au moins 6 caractères' })
   password: string;
+
+  @IsString({ message: 'Fingerprint is required' })
+  @IsNotEmpty({ message: 'Fingerprint is required' })
+  fingerprint: string;
+
+  @IsOptional()
+  @IsString()
+  deviceName?: string;
+
+  @IsOptional()
+  @IsString()
+  browser?: string;
+
+  @IsOptional()
+  @IsString()
+  operatingSystem?: string;
+
+  @IsOptional()
+  @IsString()
+  platform?: string;
 }

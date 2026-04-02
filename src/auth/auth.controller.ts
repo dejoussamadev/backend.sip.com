@@ -6,11 +6,13 @@ import {
     UseGuards,
     HttpCode,
     HttpStatus,
+    Req,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { CurrentUser } from './decorators/current-user.decorator';
+import type { Request } from 'express';
 
 @Controller('auth')
 export class AuthController {
@@ -19,8 +21,8 @@ export class AuthController {
     // Route POST /auth/login
     @Post('login')
     @HttpCode(HttpStatus.OK)
-    async login(@Body() loginDto: LoginDto) {
-        return this.authService.login(loginDto);
+    async login(@Body() loginDto: LoginDto, @Req() request: Request) {
+        return this.authService.login(loginDto, request);
     }
 
     // Route GET /auth/profile (protégée)

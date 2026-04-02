@@ -71,6 +71,37 @@ export class NotificationsService {
     await this.emailService.sendPropertyCreatedEmail(recipients, payload);
   }
 
+  async sendLoginRequestEmail(payload: {
+    userName: string;
+    userEmail: string;
+    fingerprint: string;
+    deviceName?: string;
+    browser?: string;
+    operatingSystem?: string;
+    platform?: string;
+    ipAddress?: string | null;
+  }) {
+    const admins = await this.prisma.user.findMany({
+      where: {
+        role: Role.ADMIN,
+        isActive: true,
+      },
+      select: {
+        email: true,
+      },
+    });
+
+    const recipients = admins.map((admin) => admin.email).filter(Boolean);
+
+    if (recipients.length === 0) {
+      this.logger.warn('No admin users found for login request email notification');
+      return;
+    }
+
+    this.logger.log(`Sending login request email to admins: ${recipients.join(', ')}`);
+    await this.emailService.sendLoginRequestEmail(recipients, payload);
+  }
+
   // Notification: property updated
   async notifyPropertyUpdated(referenceNumber: string, agentName: string) {
     const now = new Date().toLocaleString('en-GB', {
