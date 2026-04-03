@@ -61,7 +61,7 @@ HIGH
   name/intent
 - Fix: Correct the query field
 
-8. [ ] bedrooms Filter Accepted but Silently Ignored
+8. [x] bedrooms Filter Accepted but Silently Ignored
 
 - File: src/properties/properties.service.ts:259
 - Comment says "The current Property model has no bedrooms column yet" but the parameter is still
