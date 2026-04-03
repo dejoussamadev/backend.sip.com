@@ -7,6 +7,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateLandlordDto } from './dto/create-landlord.dto';
 import { UpdateLandlordDto } from './dto/update-landlord.dto';
+import { normalizePagination } from '../common/utils/pagination.util';
 
 @Injectable()
 export class LandlordsService {
@@ -66,14 +67,15 @@ export class LandlordsService {
       return data.map(mapLandlord);
     }
 
-    const skip = (page - 1) * limit;
+    const pagination = normalizePagination(page, limit);
+    const skip = pagination.skip;
     const [data, total] = await this.prisma.$transaction([
       this.prisma.landlord.findMany({
         where,
         orderBy: { id: 'desc' },
         include,
         skip,
-        take: limit,
+        take: pagination.limit,
       }),
       this.prisma.landlord.count({ where }),
     ]);
@@ -82,9 +84,9 @@ export class LandlordsService {
       data: data.map(mapLandlord),
       meta: {
         total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit),
+        page: pagination.page,
+        limit: pagination.limit,
+        totalPages: Math.ceil(total / pagination.limit),
       },
     };
   }

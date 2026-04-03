@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateFacilityDto } from './dto/create-facility.dto';
 import { UpdateFacilityDto } from './dto/update-facility.dto';
+import { normalizePagination } from '../common/utils/pagination.util';
 
 @Injectable()
 export class FacilitiesService {
@@ -39,14 +40,15 @@ export class FacilitiesService {
       return data.map(mapFacility);
     }
 
-    const skip = (page - 1) * limit;
+    const pagination = normalizePagination(page, limit);
+    const skip = pagination.skip;
     const [data, total] = await this.prisma.$transaction([
       this.prisma.facility.findMany({
         where,
         orderBy: { id: 'desc' },
         include,
         skip,
-        take: limit,
+        take: pagination.limit,
       }),
       this.prisma.facility.count({ where }),
     ]);
@@ -55,9 +57,9 @@ export class FacilitiesService {
       data: data.map(mapFacility),
       meta: {
         total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit),
+        page: pagination.page,
+        limit: pagination.limit,
+        totalPages: Math.ceil(total / pagination.limit),
       },
     };
   }
