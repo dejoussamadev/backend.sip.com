@@ -168,6 +168,17 @@ export class UsersService {
     return this.findOne(id);
   }
 
+  async findSimpleList() {
+    return this.prisma.user.findMany({
+      where: { isActive: true },
+      select: {
+        id: true,
+        name: true,
+      },
+      orderBy: { name: 'asc' },
+    });
+  }
+
   async update(id: number, updateAgentDto: UpdateAgentDto) {
     const existingAgent = await this.findAgentByIdOrThrow(id);
 

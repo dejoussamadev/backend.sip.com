@@ -55,6 +55,12 @@ export class UsersController {
     return this.usersService.findMyProfile(user.id);
   }
 
+  @Get('list/simple')
+  @Roles(Role.AGENT, Role.ADMIN)
+  findSimpleList() {
+    return this.usersService.findSimpleList();
+  }
+
   // Get a single user by id as an admin.
   @Get(':id')
   @Roles(Role.ADMIN)

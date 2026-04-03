@@ -51,7 +51,7 @@ export class NotificationsController {
     );
   }
 
-  // GET /notifications/agents - notifications des agents
+  // GET /notifications/users - notifications des users
   @Get('agents')
   findAgentNotifications(
     @Query('unreadOnly') unreadOnly?: string,
