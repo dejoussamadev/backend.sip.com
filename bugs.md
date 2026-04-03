@@ -85,19 +85,19 @@ MEDIUM
 - Fix: Unify into a single GET /properties endpoint with comprehensive query params, or keep POST but
   deprecate GET's filter params and redirect
 
-11. [ ] Missing Relation Includes in Queries
+11. [x] Missing Relation Includes in Queries
 
 - findAll() and advancedSearch() don't include furnishing, facilities, utilities relations
 - Filtering by facility works, but the response doesn't include the matched facility data
 - Fix: Add missing includes or use select for performance
 
-12. [ ] CORS Hardcoded for localhost
+12. [x] CORS Hardcoded for localhost
 
 - File: src/main.ts:22-26
 - origin: ['http://localhost:4200'] - will break in production
 - Fix: Use process.env.CORS_ORIGIN
 
-13. [ ] Missing Database Indexes
+13. [x] Missing Database Indexes
 
 - File: prisma/schema/property.prisma - missing indexes on furnishingId, landlordId, composite
   (status, expirationDate)
@@ -105,7 +105,7 @@ MEDIUM
 - File: prisma/schema/landlord.prisma - no index on email
 - Fix: Add @@index directives
 
-14. [ ] Missing CASCADE DELETE Strategy on Property Relations
+14. [x] Missing CASCADE DELETE Strategy on Property Relations
 
 - Property FK to User, Landlord, Category, Type, Layout, Location, Furnishing have NO onDelete
   defined
@@ -113,13 +113,13 @@ MEDIUM
 - Join tables (CategoryFurnishing, CategoryType, TypeLayout) also lack cascade
 - Fix: Define onDelete: Cascade, SetNull, or Restrict per relation
 
-15. [ ] Float Used for Financial Fields
+15. [x] Float Used for Financial Fields
 
 - File: prisma/schema/property.prisma - range and commission use Float
 - Floating point causes precision errors for money
 - Fix: Use Decimal @db.Decimal(15, 2)
 
-16. [ ] Default expiryDate Set to new Date()
+16. [x] Default expiryDate Set to new Date()
 
 - File: src/properties/properties.service.ts:169
 - When no expiry date is provided, it defaults to the current moment (already expired)
