@@ -19,8 +19,12 @@ async function bootstrap() {
   );
 
   // ✅ CORS pour le frontend Angular
+  const corsOrigins = process.env.CORS_ORIGINS
+      ? process.env.CORS_ORIGINS.split(',').map((o) => o.trim())
+      : ['http://localhost:4200'];
+
   app.enableCors({
-    origin: ['http://localhost:4200'],
+    origin: corsOrigins,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
     credentials: true,
   });
