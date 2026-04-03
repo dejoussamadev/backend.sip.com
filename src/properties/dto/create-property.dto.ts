@@ -15,7 +15,6 @@ export class CreatePropertyDto {
   @IsOptional() @IsEnum(PropertyType) type?: PropertyType;
   @IsOptional() @IsEnum(PropertyLayout) layout?: PropertyLayout;
 
-  @IsOptional() @IsInt() bedrooms?: number;
   @IsOptional() @IsInt() bathrooms?: number;
   @IsOptional() @IsBoolean() maidRoom?: boolean;
 

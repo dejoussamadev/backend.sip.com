@@ -49,7 +49,6 @@ export class PropertiesService {
         // Land : neutralise les champs non pertinents
         if (dto.type === PropertyType.LAND) {
             dto.bathrooms = undefined;
-            dto.bedrooms = undefined;
             dto.maidRoom = undefined;
             dto.layout = 'sqm_space' as any;
             dto.balcony = undefined;
@@ -220,7 +219,6 @@ export class PropertiesService {
             maxAmount,
             minSize,
             maxSize,
-            bedrooms,
             bathrooms,
             maidRoom,
             shortTerm,
@@ -300,7 +298,6 @@ export class PropertiesService {
                     lte: maxSize ? Number(maxSize) : undefined,
                 }
                 : undefined,
-            // The current Property model has no bedrooms column yet, so this filter cannot be applied here.
             bathrooms: bathrooms ? Number(bathrooms) : undefined,
             maidRoom: maidRoom !== undefined ? maidRoom === 'true' || maidRoom === '1' : undefined,
             shortTerm: shortTerm !== undefined ? shortTerm === 'true' || shortTerm === '1' : undefined,
