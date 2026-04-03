@@ -147,19 +147,19 @@ MEDIUM
  ---
 LOW
 
-20. [ ] Unused DTOs
+20. [x] Unused DTOs
 
 - src/agents/dto/change-password.dto.ts, create-admin.dto.ts, update-profile.dto.ts - defined but
   never used in any controller
 - Fix: Remove or implement the endpoints
 
-21. [ ] Inconsistent Pagination Parameter Names
+21. [x] Inconsistent Pagination Parameter Names
 
 - Some services use Number(limit), others use parseInt(limit, 10)
 - GET uses page/limit, POST uses skip/take
 - Fix: Standardize across all services
 
-22. [ ] Boolean String Conversion Done Manually
+22. [x] Boolean String Conversion Done Manually
 
 - File: src/properties/properties.service.ts:490
 - filters.maidRoom === true || filters.maidRoom === 'true' || filters.maidRoom === '1'

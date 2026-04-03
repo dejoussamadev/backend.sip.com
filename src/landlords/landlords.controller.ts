@@ -167,8 +167,8 @@ export class LandlordsController {
     const paginate = withPagination === 'true';
     return this.landlordsService.findAll({
       paginate,
-      page: page ? parseInt(page, 10) : 1,
-      limit: limit ? parseInt(limit, 10) : 10,
+      page,
+      limit,
       search: search?.trim() || undefined,
     });
   }

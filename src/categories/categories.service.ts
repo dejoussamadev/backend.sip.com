@@ -14,8 +14,8 @@ export class CategoriesService {
 
   async findAll(options: {
     paginate: boolean;
-    page: number;
-    limit: number;
+    page: unknown;
+    limit: unknown;
     search?: string;
   }) {
     const { paginate, page, limit, search } = options;
