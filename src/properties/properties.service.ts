@@ -202,26 +202,62 @@ export class PropertiesService {
 
     async findAll(filters: any = {}) {
         const {
+            keyword,
             status,
             type,
+            typeId,
             category,
+            categoryId,
+            layoutId,
             locationCode,
+            locationId,
+            furnishingId,
             agentId,
             landlordId,
             minPrice,
             maxPrice,
+            minAmount,
+            maxAmount,
+            minSize,
+            maxSize,
             bedrooms,
             bathrooms,
+            maidRoom,
+            shortTerm,
+            utilitiesIncluded,
+            balcony,
+            view,
+            facilityId,
             page = '1',
             limit = '10',
+            skip,
+            take,
         } = filters;
 
-        const pagination = normalizePagination(page, limit);
-        const take = pagination.limit;
-        const skip = pagination.skip;
+        const resolvedLimit = take ?? limit;
+        const pagination = normalizePagination(page, resolvedLimit);
+        const requestedSkip = skip !== undefined ? Number(skip) : undefined;
+        const resolvedSkip =
+            requestedSkip !== undefined && Number.isFinite(requestedSkip) && requestedSkip >= 0
+                ? Math.floor(requestedSkip)
+                : pagination.skip;
+        const resolvedTake = pagination.limit;
 
         const where: Prisma.PropertyWhereInput = {
+            OR: keyword
+                ? [
+                    {name: {contains: keyword, mode: 'insensitive'}},
+                    {referenceNumber: {contains: keyword, mode: 'insensitive'}},
+                    {details: {contains: keyword, mode: 'insensitive'}},
+                    {directions: {contains: keyword, mode: 'insensitive'}},
+                ]
+                : undefined,
             status: status || undefined,
+            categoryId: categoryId ? Number(categoryId) : undefined,
+            typeId: typeId ? Number(typeId) : undefined,
+            layoutId: layoutId ? Number(layoutId) : undefined,
+            locationId: locationId ? Number(locationId) : undefined,
+            furnishingId: furnishingId ? Number(furnishingId) : undefined,
             type: type
                 ? {
                     is: {
@@ -255,11 +291,31 @@ export class PropertiesService {
             userId: agentId ? Number(agentId) : undefined,
             landlordId: landlordId ? Number(landlordId) : undefined,
             range: {
-                gte: minPrice ? Number(minPrice) : undefined,
-                lte: maxPrice ? Number(maxPrice) : undefined,
+                gte: minPrice ? Number(minPrice) : minAmount ? Number(minAmount) : undefined,
+                lte: maxPrice ? Number(maxPrice) : maxAmount ? Number(maxAmount) : undefined,
             },
+            size: minSize || maxSize
+                ? {
+                    gte: minSize ? Number(minSize) : undefined,
+                    lte: maxSize ? Number(maxSize) : undefined,
+                }
+                : undefined,
             // The current Property model has no bedrooms column yet, so this filter cannot be applied here.
             bathrooms: bathrooms ? Number(bathrooms) : undefined,
+            maidRoom: maidRoom !== undefined ? maidRoom === 'true' || maidRoom === '1' : undefined,
+            shortTerm: shortTerm !== undefined ? shortTerm === 'true' || shortTerm === '1' : undefined,
+            hasUtilities: utilitiesIncluded !== undefined
+                ? utilitiesIncluded === 'true' || utilitiesIncluded === '1'
+                : undefined,
+            balcony: balcony || undefined,
+            view: view || undefined,
+            facilities: facilityId
+                ? {
+                    some: {
+                        facilityId: Number(facilityId),
+                    },
+                }
+                : undefined,
         };
 
         const include = {
@@ -276,8 +332,8 @@ export class PropertiesService {
                 where,
                 include,
                 orderBy: {updatedAt: 'desc'},
-                skip,
-                take,
+                skip: resolvedSkip,
+                take: resolvedTake,
             }),
             this.prisma.property.count({where}),
         ]);
@@ -286,9 +342,9 @@ export class PropertiesService {
             data,
             meta: {
                 total,
-                page: pagination.page,
-                limit: take,
-                totalPages: Math.ceil(total / take),
+                page: Math.floor(resolvedSkip / resolvedTake) + 1,
+                limit: resolvedTake,
+                totalPages: Math.ceil(total / resolvedTake),
             },
         };
     }
@@ -468,95 +524,6 @@ export class PropertiesService {
         );
 
         return updated;
-    }
-
-    async advancedSearch(filters: Record<string, any>) {
-        const where: any = {};
-
-        if (filters.keyword) {
-            where.OR = [
-                {name: {contains: filters.keyword, mode: 'insensitive'}},
-                {referenceNumber: {contains: filters.keyword, mode: 'insensitive'}},
-                {details: {contains: filters.keyword, mode: 'insensitive'}},
-                {directions: {contains: filters.keyword, mode: 'insensitive'}},
-            ];
-        }
-
-        if (filters.categoryId) where.categoryId = Number(filters.categoryId);
-        if (filters.typeId) where.typeId = Number(filters.typeId);
-        if (filters.layoutId) where.layoutId = Number(filters.layoutId);
-        if (filters.locationId) where.locationId = Number(filters.locationId);
-        if (filters.furnishingId) where.furnishingId = Number(filters.furnishingId);
-
-        if (filters.maidRoom !== undefined && filters.maidRoom !== null)
-            where.maidRoom = filters.maidRoom === true || filters.maidRoom === 'true' || filters.maidRoom === '1';
-        if (filters.shortTerm !== undefined && filters.shortTerm !== null)
-            where.shortTerm = filters.shortTerm === true || filters.shortTerm === 'true' || filters.shortTerm === '1';
-        if (filters.utilitiesIncluded !== undefined && filters.utilitiesIncluded !== null)
-            where.hasUtilities =
-                filters.utilitiesIncluded === true ||
-                filters.utilitiesIncluded === 'true' ||
-                filters.utilitiesIncluded === '1';
-        if (filters.status) where.status = filters.status;
-        if (filters.bathrooms) where.bathrooms = Number(filters.bathrooms);
-        if (filters.balcony) where.balcony = filters.balcony;
-        if (filters.view) where.view = filters.view;
-        if (filters.agentId) where.userId = Number(filters.agentId);
-        if (filters.landlordId) where.landlordId = Number(filters.landlordId);
-        if (filters.facilityId) {
-            where.facilities = {
-                some: {
-                    facilityId: Number(filters.facilityId),
-                },
-            };
-        }
-
-        // Recherche sur les montants (range)
-        if (filters.minAmount || filters.maxAmount) {
-            where.range = {};
-            if (filters.minAmount) where.range.gte = Number(filters.minAmount);
-            if (filters.maxAmount) where.range.lte = Number(filters.maxAmount);
-        }
-
-        // Recherche sur la taille des biens
-        if (filters.minSize || filters.maxSize) {
-            where.size = {};
-            if (filters.minSize) where.size.gte = Number(filters.minSize);
-            if (filters.maxSize) where.size.lte = Number(filters.maxSize);
-        }
-
-        const take = filters.take ? Number(filters.take) : 10;
-        const skip = filters.skip ? Number(filters.skip) : 0;
-
-        const include = {
-            category: true,
-            type: true,
-            layout: true,
-            location: true,
-            user: true,
-            landlord: true,
-        };
-
-        const [data, total] = await Promise.all([
-            this.prisma.property.findMany({
-                where,
-                orderBy: {updatedAt: 'desc'},
-                take,
-                skip,
-                include,
-            }),
-            this.prisma.property.count({where}),
-        ]);
-
-        return {
-            data,
-            meta: {
-                total,
-                page: Math.floor(skip / take) + 1,
-                limit: take,
-                totalPages: Math.ceil(total / take),
-            },
-        };
     }
 
     async remove(id: number) {

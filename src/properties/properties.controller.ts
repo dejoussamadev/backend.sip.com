@@ -58,48 +58,82 @@ export class PropertiesController {
     const agentName = user?.name ?? 'Unknown';
     const userRole = user?.role as Role | undefined;
     if (userRole === Role.AGENT) {
-      // Les agents ne peuvent pas forcer le statut
+      // Les users ne peuvent pas forcer le statut
       delete dto.status;
     }
     return this.propertiesService.create(dto, agentName, userRole);
   }
-  @Post('filter')
-  async filterProperties(@Body() filters: Record<string, any>) {
-    return this.propertiesService.advancedSearch(filters);
-  }
 
   @Get()
+  @Roles(Role.ADMIN, Role.AGENT)
   findAll(
     @Query('page') page?: string,
     @Query('limit') limit?: string,
+    @Query('skip') skip?: string,
+    @Query('take') take?: string,
+    @Query('keyword') keyword?: string,
     @Query('status') status?: string,
     @Query('type') type?: string,
+    @Query('typeId') typeId?: string,
     @Query('category') category?: string,
+    @Query('categoryId') categoryId?: string,
+    @Query('layoutId') layoutId?: string,
     @Query('locationCode') locationCode?: string,
+    @Query('locationId') locationId?: string,
+    @Query('furnishingId') furnishingId?: string,
     @Query('minPrice') minPrice?: string,
     @Query('maxPrice') maxPrice?: string,
+    @Query('minAmount') minAmount?: string,
+    @Query('maxAmount') maxAmount?: string,
+    @Query('minSize') minSize?: string,
+    @Query('maxSize') maxSize?: string,
     @Query('bedrooms') bedrooms?: string,
     @Query('bathrooms') bathrooms?: string,
+    @Query('maidRoom') maidRoom?: string,
+    @Query('shortTerm') shortTerm?: string,
+    @Query('utilitiesIncluded') utilitiesIncluded?: string,
+    @Query('balcony') balcony?: string,
+    @Query('view') view?: string,
+    @Query('facilityId') facilityId?: string,
     @Query('agentId') agentId?: string,
     @Query('landlordId') landlordId?: string,
   ) {
     return this.propertiesService.findAll({
       page,
       limit,
+      skip,
+      take,
+      keyword,
       status,
       type,
+      typeId,
       category,
+      categoryId,
+      layoutId,
       locationCode,
+      locationId,
+      furnishingId,
       minPrice,
       maxPrice,
+      minAmount,
+      maxAmount,
+      minSize,
+      maxSize,
       bedrooms,
       bathrooms,
+      maidRoom,
+      shortTerm,
+      utilitiesIncluded,
+      balcony,
+      view,
+      facilityId,
       agentId,
       landlordId,
     });
   }
 
   @Get(':id')
+  @Roles(Role.ADMIN, Role.AGENT)
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.propertiesService.findOne(id);
   }
