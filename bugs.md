@@ -49,7 +49,7 @@ HIGH
 - POST /auth/login has no throttling - vulnerable to brute force
 - Fix: Add @nestjs/throttler with strict limits on auth endpoints
 
-6. [ ] Missing Environment Variable Validation
+6. [x] Missing Environment Variable Validation
 
 - process.env.* is used without validation across auth, email, and main.ts
 - Fix: Use @nestjs/config with Joi schema validation to fail fast on missing vars
