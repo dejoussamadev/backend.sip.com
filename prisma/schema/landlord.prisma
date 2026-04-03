@@ -16,5 +16,6 @@ model Landlord {
 
   properties Property[]
 
+  @@index([email])
   @@map("landlords")
 }
