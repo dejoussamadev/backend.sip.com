@@ -11,7 +11,7 @@ model PropertyUtility {
   utilityId  Int
 
   property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
-  utility  Utility  @relation(fields: [utilityId], references: [id])
+  utility  Utility  @relation(fields: [utilityId], references: [id], onDelete: Cascade)
 
   @@id([propertyId, utilityId])
   @@map("property_utilities")
