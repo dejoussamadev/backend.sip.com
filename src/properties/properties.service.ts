@@ -15,6 +15,7 @@ import {PropertyCategory, PropertyType, StatusOption} from './constants/property
 import {Prisma, PropertyStatus, Role} from '@prisma/client';
 import {NotificationsService} from '../notifications/notifications.service';
 import { normalizePagination } from '../common/utils/pagination.util';
+import { parseBool } from '../common/utils/parse-bool.util';
 
 @Injectable()
 export class PropertiesService {
@@ -299,11 +300,9 @@ export class PropertiesService {
                 }
                 : undefined,
             bathrooms: bathrooms ? Number(bathrooms) : undefined,
-            maidRoom: maidRoom !== undefined ? maidRoom === 'true' || maidRoom === '1' : undefined,
-            shortTerm: shortTerm !== undefined ? shortTerm === 'true' || shortTerm === '1' : undefined,
-            hasUtilities: utilitiesIncluded !== undefined
-                ? utilitiesIncluded === 'true' || utilitiesIncluded === '1'
-                : undefined,
+            maidRoom: parseBool(maidRoom),
+            shortTerm: parseBool(shortTerm),
+            hasUtilities: parseBool(utilitiesIncluded),
             balcony: balcony || undefined,
             view: view || undefined,
             facilities: facilityId
