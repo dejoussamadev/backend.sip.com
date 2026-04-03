@@ -132,12 +132,12 @@ MEDIUM
 - Errors are silently swallowed
 - Fix: Replace with this.logger.error() and re-throw if appropriate
 
-18. [ ] Massive Code Duplication - Pagination Logic
+18. [x] Massive Code Duplication - Pagination Logic
 
 - 12+ services repeat identical pagination boilerplate (skip/take/count/meta)
 - Fix: Extract to a shared PaginationService or utility function
 
-19. [ ] Missing @IsNotEmpty() on Master Data DTOs
+19. [x] Missing @IsNotEmpty() on Master Data DTOs
 
 - Create DTOs for categories, types, layouts, locations, facilities, utilities only have @IsString()
   on name
