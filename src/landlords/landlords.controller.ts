@@ -16,6 +16,7 @@ import {
   Query,
   Req,
   BadRequestException,
+  Logger,
 } from '@nestjs/common';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { LandlordsService } from './landlords.service';
@@ -72,6 +73,8 @@ const landlordUploadOptions = {
 @Controller('landlords')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class LandlordsController {
+  private readonly logger = new Logger(LandlordsController.name);
+
   constructor(
     private readonly landlordsService: LandlordsService,
     private readonly uploadService: UploadService,
@@ -284,9 +287,7 @@ export class LandlordsController {
         );
         this.uploadService.deleteFile(filePath);
       } catch (e) {
-        console.log(
-          'Erreur lors de la suppression du fichier marketingAgreement',
-        );
+        this.logger.error('Failed to delete marketingAgreement file', e);
       }
     }
 
@@ -295,7 +296,7 @@ export class LandlordsController {
         const filePath = landlord.photo.replace(/^.*\/uploads/, './uploads');
         this.uploadService.deleteFile(filePath);
       } catch (e) {
-        console.log('Erreur lors de la suppression de la photo du landlord');
+        this.logger.error('Failed to delete landlord photo', e);
       }
     }
 
@@ -307,7 +308,7 @@ export class LandlordsController {
         );
         this.uploadService.deleteFile(filePath);
       } catch (e) {
-        console.log('Erreur lors de la suppression du fichier draftContract');
+        this.logger.error('Failed to delete draftContract file', e);
       }
     }
 

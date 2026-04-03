@@ -125,7 +125,7 @@ MEDIUM
 - When no expiry date is provided, it defaults to the current moment (already expired)
 - Fix: Default to null or a sensible future date
 
-17. [ ] console.log in Production Code
+17. [x] console.log in Production Code
 
 - File: src/landlords/landlords.controller.ts:287-299
 - Three console.log() calls in catch blocks instead of using NestJS Logger
