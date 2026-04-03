@@ -166,7 +166,7 @@ export class PropertiesService {
                         : dto.expiryDate instanceof Date
                             ? dto.expiryDate
                             : new Date(String(dto.expiryDate)))
-                    : new Date(),
+                    : null,
                 access: dto.access ?? null,
                 hasUtilities: dto.utilitiesIncluded ?? false,
                 hasFacilities: dto.facilitiesEnabled ?? false,

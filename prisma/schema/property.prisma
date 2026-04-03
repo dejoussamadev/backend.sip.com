@@ -41,7 +41,7 @@ model Property {
   range           Decimal @db.Decimal(15, 2)
   commission      Decimal @db.Decimal(5, 2)
   status          PropertyStatus  @default(PENDING)
-  expirationDate  DateTime
+  expirationDate  DateTime?
   access          PropertyAccess?
   hasUtilities    Boolean         @default(false)
   hasFacilities   Boolean         @default(false)
