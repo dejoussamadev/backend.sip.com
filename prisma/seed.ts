@@ -266,7 +266,7 @@ async function seedLandlords(imageAssets: SeedAssets): Promise<NamedRecord[]> {
                         imageAssets.landlordContracts[
                         index % imageAssets.landlordContracts.length
                             ] ?? seededUploadPath('landlords', `contract-${index + 1}.pdf`),
-                } as any,
+                },
             });
         }),
     );

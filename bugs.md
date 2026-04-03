@@ -165,13 +165,13 @@ LOW
 - filters.maidRoom === true || filters.maidRoom === 'true' || filters.maidRoom === '1'
 - Fix: Use @Transform() decorator or a custom pipe
 
-23. [ ] No Soft Delete / Audit Trail
+23. [x] No Soft Delete / Audit Trail (skipped — keeping current TRASH/ARCHIVED approach)
 
 - No deletedAt timestamps, no createdById/updatedById tracking
 - Property has TRASH/ARCHIVED status as manual soft delete but no standard implementation
 - Fix: Design decision - consider adding audit columns
 
-24. [ ] Seed Data Uses as any Type Assertions
+24. [x] Seed Data Uses as any Type Assertions
 
 - File: prisma/seed.ts:269
 - Bypasses TypeScript checks, hides potential schema mismatches
