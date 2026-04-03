@@ -22,7 +22,7 @@ CRITICAL
 - Both files fall back to 'votre-secret-super-securise-ici' if JWT_SECRET env var is missing
 - Fix: Throw an error if JWT_SECRET is not set instead of using a fallback
 
-3. [ ] Upload Endpoints Have NO Authentication
+3. [x] Upload Endpoints Have NO Authentication
 
 - File: src/upload/upload.controller.ts
 - POST /upload/image, POST /upload/images, POST /upload/fields - zero guards

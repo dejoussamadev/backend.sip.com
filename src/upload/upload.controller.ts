@@ -1,10 +1,16 @@
-import { Controller, Post, UploadedFile, UploadedFiles, UseInterceptors, Req, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Post, UploadedFile, UploadedFiles, UseGuards, UseInterceptors, Req, HttpCode, HttpStatus } from '@nestjs/common';
 import type { Request } from 'express';
+import { Role } from '@prisma/client';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
 import { UploadService } from './upload.service';
 import { SingleImageInterceptor, MultipleImagesInterceptor, PropertyFilesInterceptor } from './interceptors/file-upload.interceptor';
 import { ImageValidationPipe } from './pipes/image-validation.pipe';
 
 @Controller('upload')
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(Role.ADMIN, Role.AGENT)
 export class UploadController {
     constructor(private readonly uploadService: UploadService) {}
 
