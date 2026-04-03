@@ -177,7 +177,7 @@ LOW
 - Bypasses TypeScript checks, hides potential schema mismatches
 - Fix: Fix the types properly
 
-25. [ ] Missing getLandlords() / getAgents() Controller Endpoints
+25. [x] Missing getLandlords() / getAgents() Controller Endpoints
 
 - Methods exist in properties.service.ts but are never exposed via controller routes
 - Fix: Either expose them or remove the dead code
