@@ -8,6 +8,7 @@ import { PrismaModule } from '../prisma/prisma.module';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { LoginRequestsModule } from '../login-requests/login-requests.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { getJwtSecret } from './jwt-secret';
 
 const jwtExpiration = (process.env.JWT_EXPIRATION || '7d') as StringValue;
 
@@ -19,7 +20,7 @@ const jwtExpiration = (process.env.JWT_EXPIRATION || '7d') as StringValue;
     PassportModule,
     JwtModule.register({
       global: true,
-      secret: process.env.JWT_SECRET || 'votre-secret-super-securise-ici',
+      secret: getJwtSecret(),
       signOptions: { expiresIn: jwtExpiration },
     }),
   ],
