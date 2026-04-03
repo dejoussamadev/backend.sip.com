@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
+import { normalizePagination } from '../common/utils/pagination.util';
 
 @Injectable()
 export class CategoriesService {
@@ -41,14 +42,15 @@ export class CategoriesService {
       return data.map(mapCategory);
     }
 
-    const skip = (page - 1) * limit;
+    const pagination = normalizePagination(page, limit);
+    const skip = pagination.skip;
     const [data, total] = await this.prisma.$transaction([
       this.prisma.category.findMany({
         where,
         include,
         orderBy: { id: 'desc' },
         skip,
-        take: limit,
+        take: pagination.limit,
       }),
       this.prisma.category.count({ where }),
     ]);
@@ -57,9 +59,9 @@ export class CategoriesService {
       data: data.map(mapCategory),
       meta: {
         total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit),
+        page: pagination.page,
+        limit: pagination.limit,
+        totalPages: Math.ceil(total / pagination.limit),
       },
     };
   }

@@ -14,6 +14,7 @@ import {generateRef} from './utils/ref.generator';
 import {PropertyCategory, PropertyType, StatusOption} from './constants/property.enums';
 import {Prisma, PropertyStatus, Role} from '@prisma/client';
 import {NotificationsService} from '../notifications/notifications.service';
+import { normalizePagination } from '../common/utils/pagination.util';
 
 @Injectable()
 export class PropertiesService {
@@ -215,8 +216,9 @@ export class PropertiesService {
             limit = '10',
         } = filters;
 
-        const take = Number(limit);
-        const skip = (Number(page) - 1) * take;
+        const pagination = normalizePagination(page, limit);
+        const take = pagination.limit;
+        const skip = pagination.skip;
 
         const where: Prisma.PropertyWhereInput = {
             status: status || undefined,
@@ -284,7 +286,7 @@ export class PropertiesService {
             data,
             meta: {
                 total,
-                page: Number(page),
+                page: pagination.page,
                 limit: take,
                 totalPages: Math.ceil(total / take),
             },

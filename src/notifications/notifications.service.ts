@@ -4,6 +4,7 @@ import { NotificationType } from '@prisma/client';
 import { NotificationFilter } from './dto/get-notifications.dto';
 import { EmailService } from './email.service';
 import { Role } from '@prisma/client';
+import { normalizePagination } from '../common/utils/pagination.util';
 
 @Injectable()
 export class NotificationsService {
@@ -137,8 +138,9 @@ export class NotificationsService {
 
   // Get all notifications with filters
   async findAll(filter?: NotificationFilter, unreadOnly?: boolean, page = '1', limit = '20') {
-    const take = Number(limit);
-    const skip = (Number(page) - 1) * take;
+    const pagination = normalizePagination(page, limit, 20);
+    const take = pagination.limit;
+    const skip = pagination.skip;
 
     const where: any = {};
 
@@ -174,7 +176,7 @@ export class NotificationsService {
       meta: {
         total,
         unreadCount,
-        page: Number(page),
+        page: pagination.page,
         limit: take,
         totalPages: Math.ceil(total / take),
       },

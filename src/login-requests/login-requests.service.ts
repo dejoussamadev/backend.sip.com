@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { LoginRequestStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { normalizePagination } from '../common/utils/pagination.util';
 
 @Injectable()
 export class LoginRequestsService {
@@ -39,9 +40,10 @@ export class LoginRequestsService {
     page = '1',
     limit = '10',
   ) {
-    const take = Number(limit);
-    const currentPage = Number(page);
-    const skip = (currentPage - 1) * take;
+    const pagination = normalizePagination(page, limit);
+    const take = pagination.limit;
+    const currentPage = pagination.page;
+    const skip = pagination.skip;
 
     const where: Prisma.LoginRequestWhereInput = {};
 

@@ -9,6 +9,7 @@ import { CreateAgentDto } from './dto/create-agent.dto';
 import { UpdateAgentDto } from './dto/update-agent.dto';
 import { Prisma, Role } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+import { normalizePagination } from '../common/utils/pagination.util';
 
 @Injectable()
 export class UsersService {
@@ -127,9 +128,10 @@ export class UsersService {
       where.isActive = status === 'active';
     }
 
-    const take = Number(limit);
-    const currentPage = Number(page);
-    const skip = (currentPage - 1) * take;
+    const pagination = normalizePagination(page, limit);
+    const take = pagination.limit;
+    const currentPage = pagination.page;
+    const skip = pagination.skip;
 
     const [data, total] = await Promise.all([
       this.prisma.user.findMany({
