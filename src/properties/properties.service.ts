@@ -191,7 +191,7 @@ export class PropertiesService {
                 referenceNumber: property.referenceNumber,
                 name: property.name,
                 agentName,
-                price: property.range,
+                price: Number(property.range),
                 status: property.status,
             });
         }
