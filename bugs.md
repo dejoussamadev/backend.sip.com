@@ -43,7 +43,7 @@ CRITICAL
  ---
 HIGH
 
-5. [ ] No Rate Limiting on Login
+5. [x] No Rate Limiting on Login
 
 - File: src/auth/auth.controller.ts
 - POST /auth/login has no throttling - vulnerable to brute force
