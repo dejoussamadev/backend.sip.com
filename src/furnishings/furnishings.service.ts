@@ -99,9 +99,8 @@ export class FurnishingsService {
     });
   }
 
-  // Récupérer les categories d'un furnishing
-  async findFurnishingByCategories(id: number) {
-    await this.findOne(id);
+  // Récupérer les furnishings associés a une categorie
+  async findFurnishingsByCategoryId(id: number) {
     const catFurnishings = await this.prisma.categoryFurnishing.findMany({
       where: { categoryId: id },
       include: { furnishing: true },

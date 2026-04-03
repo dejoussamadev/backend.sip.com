@@ -75,10 +75,10 @@ export class FurnishingsController {
     return this.furnishingsService.findPropertiesByFurnishing(id);
   }
 
-  // GET /furnishings/:id/categories
+  // GET /furnishings/by-category/:id
   @Get('by-category/:id')
   @Roles(Role.ADMIN, Role.AGENT)
-  findByCategories(@Param('id', ParseIntPipe) id: number) {
-    return this.furnishingsService.findFurnishingByCategories(id);
+  findByCategoryId(@Param('id', ParseIntPipe) id: number) {
+    return this.furnishingsService.findFurnishingsByCategoryId(id);
   }
 }
