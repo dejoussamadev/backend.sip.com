@@ -52,25 +52,25 @@ model Property {
 
   // Relations
   categoryId Int
-  category   Category @relation(fields: [categoryId], references: [id])
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
 
   typeId Int
-  type   Type @relation(fields: [typeId], references: [id])
+  type   Type @relation(fields: [typeId], references: [id], onDelete: Restrict)
 
   layoutId Int
-  layout   Layout @relation(fields: [layoutId], references: [id])
+  layout   Layout @relation(fields: [layoutId], references: [id], onDelete: Restrict)
 
   locationId Int
-  location   Location @relation(fields: [locationId], references: [id])
+  location   Location @relation(fields: [locationId], references: [id], onDelete: Restrict)
 
   furnishingId Int
-  furnishing   Furnishing @relation(fields: [furnishingId], references: [id])
+  furnishing   Furnishing @relation(fields: [furnishingId], references: [id], onDelete: Restrict)
 
   landlordId Int
-  landlord   Landlord @relation(fields: [landlordId], references: [id])
+  landlord   Landlord @relation(fields: [landlordId], references: [id], onDelete: Restrict)
 
   userId Int
-  user   User @relation(fields: [userId], references: [id])
+  user   User @relation(fields: [userId], references: [id], onDelete: Restrict)
 
   utilities  PropertyUtility[]
   facilities PropertyFacility[]

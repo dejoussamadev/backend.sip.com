@@ -13,8 +13,8 @@ model CategoryFurnishing {
   categoryId   Int
   furnishingId Int
 
-  category   Category   @relation(fields: [categoryId], references: [id])
-  furnishing Furnishing @relation(fields: [furnishingId], references: [id])
+  category   Category   @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  furnishing Furnishing @relation(fields: [furnishingId], references: [id], onDelete: Cascade)
 
   @@id([categoryId, furnishingId])
   @@map("category_furnishings")
@@ -24,8 +24,8 @@ model CategoryType {
   categoryId Int
   typeId     Int
 
-  category Category @relation(fields: [categoryId], references: [id])
-  type     Type     @relation(fields: [typeId], references: [id])
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  type     Type     @relation(fields: [typeId], references: [id], onDelete: Cascade)
 
   @@id([categoryId, typeId])
   @@map("category_types")
