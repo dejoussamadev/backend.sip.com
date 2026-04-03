@@ -14,7 +14,7 @@ import { FacilitiesModule } from './facilities/facilities.module';
 import { UtilitiesModule } from './utilities/utilities.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { UploadModule } from './upload/upload.module';
-import {UsersModule} from "./agents/users.module";
+import {UsersModule} from "./users/users.module";
 import { LoginRequestsModule } from './login-requests/login-requests.module';
 
 

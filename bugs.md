@@ -30,7 +30,7 @@ CRITICAL
 - Fix: Add @UseGuards(JwtAuthGuard, RolesGuard) and @Roles(Role.ADMIN, Role.AGENT) at controller
   level
 
-4. [ ] Missing @Roles() Decorators on Protected Routes
+4. [x] Missing @Roles() Decorators on Protected Routes
 
 - File: src/properties/properties.controller.ts
 - GET /properties, GET /properties/:id, POST /properties/filter have JwtAuthGuard + RolesGuard but no
@@ -77,7 +77,7 @@ HIGH
  ---
 MEDIUM
 
-10. [ ] Duplicate Filter Endpoints (Properties)
+10. [x] Duplicate Filter Endpoints (Properties)
 
 - GET /properties and POST /properties/filter do overlapping work with inconsistent interfaces:
     - GET uses page/limit, minPrice/maxPrice, category/type names
@@ -177,7 +177,7 @@ LOW
 - Bypasses TypeScript checks, hides potential schema mismatches
 - Fix: Fix the types properly
 
-25. [ ] Missing getLandlords() / getAgents() Controller Endpoints
+25. [x] Missing getLandlords() / getAgents() Controller Endpoints
 
 - Methods exist in properties.service.ts but are never exposed via controller routes
 - Fix: Either expose them or remove the dead code
