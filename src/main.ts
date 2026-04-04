@@ -1,10 +1,14 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe, Logger } from '@nestjs/common';
+import cookieParser from 'cookie-parser';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
   const app = await NestFactory.create(AppModule);
+
+  // ✅ Cookie parser for httpOnly JWT cookies
+  app.use(cookieParser());
 
   // ✅ Validation globale des DTOs
   app.useGlobalPipes(

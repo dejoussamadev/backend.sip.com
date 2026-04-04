@@ -50,7 +50,10 @@ export class AuthService {
 
     if (user.role === 'ADMIN') {
       this.logger.log(`Admin login successful for ${email}`);
-      return this.buildLoginResponse(user);
+      return {
+        accessToken: await this.generateAccessToken(user),
+        ...this.buildUserResponse(user),
+      };
     }
 
     const trustedDevice = await this.prisma.trustedDevice.findUnique({
@@ -133,7 +136,10 @@ export class AuthService {
     });
 
     this.logger.log(`Login successful for ${email} (${user.role})`);
-    return this.buildLoginResponse(user);
+    return {
+      accessToken: await this.generateAccessToken(user),
+      ...this.buildUserResponse(user),
+    };
   }
 
   async getProfile(userId: number) {
@@ -191,7 +197,10 @@ export class AuthService {
     return typeof userAgent === 'string' ? userAgent : null;
   }
 
-  private async buildLoginResponse(user: User) {
+  /**
+   * Generates a signed JWT for the given user.
+   */
+  async generateAccessToken(user: User): Promise<string> {
     const payload = {
       sub: user.id,
       email: user.email,
@@ -199,12 +208,15 @@ export class AuthService {
       name: user.name,
     };
 
-    const accessToken = await this.jwtService.signAsync(payload);
-    const { password, ...userWithoutPassword } = user;
+    return this.jwtService.signAsync(payload);
+  }
 
-    return {
-      access_token: accessToken,
-      user: userWithoutPassword,
-    };
+  /**
+   * Builds the login response body (user data only, no token).
+   * The token is set as an httpOnly cookie by the controller.
+   */
+  buildUserResponse(user: User) {
+    const { password, ...userWithoutPassword } = user;
+    return { user: userWithoutPassword };
   }
 }
