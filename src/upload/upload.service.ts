@@ -39,7 +39,11 @@ export class UploadService {
     }
 
     deleteFile(filePath: string): void {
+        const uploadsRoot = path.resolve('uploads');
         const fullPath = path.resolve(filePath);
+        if (!fullPath.startsWith(uploadsRoot + path.sep)) {
+            throw new NotFoundException(`Invalid file path: ${filePath}`);
+        }
         if (!fs.existsSync(fullPath)) throw new NotFoundException(`Fichier introuvable: ${filePath}`);
         fs.unlinkSync(fullPath);
         this.logger.log(`Fichier supprimé: ${fullPath}`);
