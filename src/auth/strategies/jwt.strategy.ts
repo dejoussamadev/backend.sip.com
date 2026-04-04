@@ -1,14 +1,22 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
-import { ExtractJwt, Strategy } from 'passport-jwt';
+import { Strategy } from 'passport-jwt';
 import { PrismaService } from '../../prisma/prisma.service';
 import { getJwtSecret } from '../jwt-secret';
+import type { Request } from 'express';
+
+/**
+ * Extracts the JWT from the httpOnly 'access_token' cookie.
+ */
+function cookieExtractor(req: Request): string | null {
+  return req?.cookies?.access_token ?? null;
+}
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(private prisma: PrismaService) {
     super({
-      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      jwtFromRequest: cookieExtractor,
       ignoreExpiration: false,
       secretOrKey: getJwtSecret(),
     });
