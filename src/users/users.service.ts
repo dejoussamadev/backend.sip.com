@@ -20,6 +20,7 @@ export class UsersService {
     id: true,
     name: true,
     agentCode: true,
+    emp_code: true,
     email: true,
     mobile: true,
     countryCode: true,
@@ -50,7 +51,7 @@ export class UsersService {
 
   private async generateAgentCode(): Promise<string> {
     const lastAgent = await this.prisma.user.findFirst({
-      orderBy: { createdAt: 'desc' },
+      orderBy: { agentCode: 'desc' },
       select: { agentCode: true },
     });
 
@@ -81,18 +82,32 @@ export class UsersService {
       this.SALT_ROUNDS,
     );
 
-    const agentCode = await this.generateAgentCode();
+    const MAX_RETRIES = 3;
+    let agent;
 
-    const agent = await this.prisma.user.create({
-      data: {
-        ...createAgentDto,
-        email,
-        agentCode,
-        password: hashedPassword,
-        role: createAgentDto.role ?? Role.AGENT,
-      },
-      select: this.defaultSelect,
-    });
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      const agentCode = await this.generateAgentCode();
+      try {
+        agent = await this.prisma.user.create({
+          data: {
+            ...createAgentDto,
+            email,
+            agentCode,
+            password: hashedPassword,
+            role: createAgentDto.role ?? Role.AGENT,
+          },
+          select: this.defaultSelect,
+        });
+        break;
+      } catch (error) {
+        const isUniqueViolation =
+          error instanceof Prisma.PrismaClientKnownRequestError &&
+          error.code === 'P2002';
+        if (!isUniqueViolation || attempt === MAX_RETRIES - 1) {
+          throw error;
+        }
+      }
+    }
 
     this.logger.log(`User created: ${agent.email} (${agent.agentCode})`);
     return agent;
