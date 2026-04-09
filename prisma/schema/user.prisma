@@ -7,6 +7,7 @@ model User {
   id                  Int      @id @default(autoincrement())
   name                String
   agentCode           String   @unique
+  emp_code            String?
   email               String   @unique
   password            String
   mobile              String

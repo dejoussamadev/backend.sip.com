@@ -28,6 +28,10 @@ export class CreateAgentDto {
 
   @IsString()
   @IsOptional()
+  emp_code?: string;
+
+  @IsString()
+  @IsOptional()
   photo?: string;
 
   @IsInt()
