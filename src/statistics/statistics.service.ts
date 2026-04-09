@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PropertyStatus, Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { normalizePagination } from '../common/utils/pagination.util';
 import { OverviewStatisticsDto } from './dto/overview-statistics.dto';
 import { AdminStatisticsDto } from './dto/admin-statistics.dto';
 
@@ -29,17 +30,55 @@ export class StatisticsService {
             referenceNumber: true,
             status: true,
             createdAt: true,
+            images: true,
           },
           orderBy: { createdAt: 'desc' },
           take: 5,
-          ...(isAgent ? { where: { userId: user.id } } : {}),
         }),
       ]);
 
     return {
       totalProperties,
       ...(isAgent ? { myProperties: agentPropertyCount } : {}),
-      latestProperties,
+      latestProperties: latestProperties.map(({ images, ...rest }) => ({
+        ...rest,
+        image: images?.[0] ?? null,
+      })),
+    };
+  }
+
+  async getMyProperties(userId: number, page = '1', limit = '10') {
+    const pagination = normalizePagination(page, limit);
+
+    const where = { userId };
+    const include = {
+      category: true,
+      type: true,
+      layout: true,
+      location: true,
+      user: true,
+      landlord: true,
+    };
+
+    const [data, total] = await Promise.all([
+      this.prisma.property.findMany({
+        where,
+        include,
+        orderBy: { updatedAt: 'desc' },
+        skip: pagination.skip,
+        take: pagination.limit,
+      }),
+      this.prisma.property.count({ where }),
+    ]);
+
+    return {
+      data,
+      meta: {
+        total,
+        page: Math.floor(pagination.skip / pagination.limit) + 1,
+        limit: pagination.limit,
+        totalPages: Math.ceil(total / pagination.limit),
+      },
     };
   }
 
