@@ -6,6 +6,7 @@ export class PropertySummaryDto {
   referenceNumber: string;
   status: PropertyStatus;
   createdAt: Date;
+  image: string | null;
 }
 
 export class OverviewStatisticsDto {

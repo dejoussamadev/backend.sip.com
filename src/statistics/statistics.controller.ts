@@ -1,4 +1,4 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { Role } from '@prisma/client';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -15,6 +15,16 @@ export class StatisticsController {
   @Roles(Role.ADMIN, Role.AGENT)
   getOverview(@CurrentUser() user: { id: number; role: Role }) {
     return this.statisticsService.getOverview(user);
+  }
+
+  @Get('my-properties')
+  @Roles(Role.AGENT)
+  getMyProperties(
+    @CurrentUser() user: { id: number; role: Role },
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.statisticsService.getMyProperties(user.id, page, limit);
   }
 
   @Get('admin')
