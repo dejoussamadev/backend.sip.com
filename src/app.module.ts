@@ -17,10 +17,10 @@ import { FacilitiesModule } from './facilities/facilities.module';
 import { UtilitiesModule } from './utilities/utilities.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { UploadModule } from './upload/upload.module';
-import {UsersModule} from "./users/users.module";
+import { UsersModule } from './users/users.module';
 import { LoginRequestsModule } from './login-requests/login-requests.module';
+import { StatisticsModule } from './statistics/statistics.module';
 import { envValidationSchema } from './config/env.validation';
-
 
 @Module({
   imports: [
@@ -51,6 +51,7 @@ import { envValidationSchema } from './config/env.validation';
     UtilitiesModule,
     NotificationsModule,
     LoginRequestsModule,
+    StatisticsModule,
     UploadModule,
   ],
   controllers: [AppController],
