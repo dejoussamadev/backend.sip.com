@@ -3,17 +3,17 @@ import {
     BadRequestException,
     NotFoundException,
 } from '@nestjs/common';
-import {PrismaService} from '../prisma/prisma.service';
-import {CreatePropertyDto} from './dto/create-property.dto';
-import {UpdatePropertyDto} from './dto/update-property.dto';
+import { PrismaService } from '../prisma/prisma.service';
+import { CreatePropertyDto } from './dto/create-property.dto';
+import { UpdatePropertyDto } from './dto/update-property.dto';
 import {
     CATEGORY_TO_TYPES,
     TYPE_TO_LAYOUTS,
 } from './constants/property.options';
-import {generateRef} from './utils/ref.generator';
-import {PropertyCategory, PropertyType, StatusOption} from './constants/property.enums';
-import {Prisma, PropertyStatus, Role} from '@prisma/client';
-import {NotificationsService} from '../notifications/notifications.service';
+import { generateRef } from './utils/ref.generator';
+import { PropertyCategory, PropertyType, StatusOption } from './constants/property.enums';
+import { Prisma, PropertyStatus, Role } from '@prisma/client';
+import { NotificationsService } from '../notifications/notifications.service';
 import { normalizePagination } from '../common/utils/pagination.util';
 import { parseBool } from '../common/utils/parse-bool.util';
 
@@ -22,8 +22,7 @@ export class PropertiesService {
     constructor(
         private prisma: PrismaService,
         private notificationsService: NotificationsService,
-    ) {
-    }
+    ) {}
 
     private validateDependencies(
         category: PropertyCategory,
@@ -143,9 +142,7 @@ export class PropertiesService {
         const typeId = dto.typeId ? Number(dto.typeId) : undefined;
         const layoutId = dto.layoutId ? Number(dto.layoutId) : undefined;
         const locationId = dto.locationId ? Number(dto.locationId) : undefined;
-        const furnishingId = dto.furnishingId
-            ? Number(dto.furnishingId)
-            : undefined;
+        const furnishingId = dto.furnishingId ? Number(dto.furnishingId) : undefined;
 
         const property = await this.prisma.property.create({
             data: {
@@ -185,17 +182,17 @@ export class PropertiesService {
             } as any,
         });
 
-        // Déclencher la notification
+        // Notification en base (historique)
         await this.notificationsService.notifyPropertyCreated(property.referenceNumber, agentName);
-        if (!isAdmin) {
-            await this.notificationsService.sendPropertyCreatedEmail({
-                referenceNumber: property.referenceNumber,
-                name: property.name,
-                agentName,
-                price: Number(property.range),
-                status: property.status,
-            });
-        }
+
+        // Email à tous les admins (quel que soit le créateur)
+        await this.notificationsService.sendPropertyCreatedEmail({
+            referenceNumber: property.referenceNumber,
+            name: property.name,
+            agentName,
+            price: Number(property.range),
+            status: property.status,
+        });
 
         return property;
     }
@@ -245,10 +242,10 @@ export class PropertiesService {
         const where: Prisma.PropertyWhereInput = {
             OR: keyword
                 ? [
-                    {name: {contains: keyword, mode: 'insensitive'}},
-                    {referenceNumber: {contains: keyword, mode: 'insensitive'}},
-                    {details: {contains: keyword, mode: 'insensitive'}},
-                    {directions: {contains: keyword, mode: 'insensitive'}},
+                    { name: { contains: keyword, mode: 'insensitive' } },
+                    { referenceNumber: { contains: keyword, mode: 'insensitive' } },
+                    { details: { contains: keyword, mode: 'insensitive' } },
+                    { directions: { contains: keyword, mode: 'insensitive' } },
                 ]
                 : undefined,
             status: status || undefined,
@@ -327,11 +324,11 @@ export class PropertiesService {
             this.prisma.property.findMany({
                 where,
                 include,
-                orderBy: {updatedAt: 'desc'},
+                orderBy: { updatedAt: 'desc' },
                 skip: resolvedSkip,
                 take: resolvedTake,
             }),
-            this.prisma.property.count({where}),
+            this.prisma.property.count({ where }),
         ]);
 
         return {
@@ -375,13 +372,11 @@ export class PropertiesService {
 
         return {
             ...property,
-
-            utilities: property.utilities.map(u => ({
+            utilities: property.utilities.map((u) => ({
                 id: u.utility.id,
                 name: u.utility.name,
             })),
-
-            facilities: property.facilities.map(f => ({
+            facilities: property.facilities.map((f) => ({
                 id: f.facility.id,
                 name: f.facility.name,
             })),
@@ -411,18 +406,13 @@ export class PropertiesService {
         if (dto.balcony !== undefined) updateData.balcony = dto.balcony;
         if (dto.view !== undefined) updateData.view = dto.view;
         if (dto.price !== undefined) updateData.range = dto.price;
-        if (dto.commissionPct !== undefined)
-            updateData.commission = dto.commissionPct;
+        if (dto.commissionPct !== undefined) updateData.commission = dto.commissionPct;
         if (dto.status !== undefined) updateData.status = dto.status;
         if (dto.access !== undefined) updateData.access = dto.access;
-        if (dto.utilitiesIncluded !== undefined)
-            updateData.hasUtilities = dto.utilitiesIncluded;
-        if (dto.facilitiesEnabled !== undefined)
-            updateData.hasFacilities = dto.facilitiesEnabled;
-        if (dto.propertyDetails !== undefined)
-            updateData.details = dto.propertyDetails;
-        if (dto.propertyNotes !== undefined)
-            updateData.directions = dto.propertyNotes;
+        if (dto.utilitiesIncluded !== undefined) updateData.hasUtilities = dto.utilitiesIncluded;
+        if (dto.facilitiesEnabled !== undefined) updateData.hasFacilities = dto.facilitiesEnabled;
+        if (dto.propertyDetails !== undefined) updateData.details = dto.propertyDetails;
+        if (dto.propertyNotes !== undefined) updateData.directions = dto.propertyNotes;
         if (dto.imageUrls !== undefined) updateData.images = dto.imageUrls;
         if (dto.expiryDate !== undefined)
             updateData.expirationDate =
@@ -441,11 +431,10 @@ export class PropertiesService {
         if (dto.status !== undefined) updateData.status = this.ensureValidStatus(dto.status);
 
         const updated = await this.prisma.property.update({
-            where: {id},
+            where: { id },
             data: updateData,
         });
 
-        // Déclencher la notification
         await this.notificationsService.notifyPropertyUpdated(updated.referenceNumber, agentName);
 
         return updated;
@@ -459,9 +448,7 @@ export class PropertiesService {
         }
         this.normalizeRules(dto);
 
-        const referenceNumber = dto.refNo?.trim()
-            ? dto.refNo.trim()
-            : (current as any).referenceNumber;
+        const referenceNumber = dto.refNo?.trim() ? dto.refNo.trim() : (current as any).referenceNumber;
 
         const userId = dto.agentId ? Number(dto.agentId) : undefined;
         const landlordId = dto.landlordId ? Number(dto.landlordId) : undefined;
@@ -483,9 +470,10 @@ export class PropertiesService {
             view: dto.view ?? null,
             range: dto.price ?? 0,
             commission: dto.commissionPct ?? 0,
-            status: dto.status !== undefined
-                ? this.ensureValidStatus(dto.status)
-                : (current as any).status,
+            status:
+                dto.status !== undefined
+                    ? this.ensureValidStatus(dto.status)
+                    : (current as any).status,
             expirationDate: dto.expiryDate
                 ? typeof dto.expiryDate === 'string'
                     ? new Date(dto.expiryDate)
@@ -510,21 +498,18 @@ export class PropertiesService {
         };
 
         const updated = await this.prisma.property.update({
-            where: {id},
+            where: { id },
             data: updateData,
         });
 
-        await this.notificationsService.notifyPropertyUpdated(
-            updated.referenceNumber,
-            agentName,
-        );
+        await this.notificationsService.notifyPropertyUpdated(updated.referenceNumber, agentName);
 
         return updated;
     }
 
     async remove(id: number) {
         await this.findOne(id);
-        return this.prisma.property.delete({where: {id}});
+        return this.prisma.property.delete({ where: { id } });
     }
 
     // Landlords pour le dropdown
@@ -536,21 +521,21 @@ export class PropertiesService {
                 mobile: true,
                 countryCode: true,
             },
-            orderBy: {name: 'asc'},
+            orderBy: { name: 'asc' },
         });
     }
 
     // Agents pour le dropdown
     async getAgents() {
         return this.prisma.user.findMany({
-            where: {isActive: true},
+            where: { isActive: true },
             select: {
                 id: true,
                 name: true,
                 agentCode: true,
                 mobile: true,
             },
-            orderBy: {name: 'asc'},
+            orderBy: { name: 'asc' },
         });
     }
 }
