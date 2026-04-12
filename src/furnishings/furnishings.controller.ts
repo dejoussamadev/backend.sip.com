@@ -1,6 +1,15 @@
 import {
-  Controller, Get, Post, Body, Patch, Param, Delete,
-  UseGuards, ParseIntPipe, HttpCode, HttpStatus,
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  UseGuards,
+  ParseIntPipe,
+  HttpCode,
+  HttpStatus,
   Query,
 } from '@nestjs/common';
 import { FurnishingsService } from './furnishings.service';

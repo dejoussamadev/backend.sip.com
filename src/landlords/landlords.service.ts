@@ -127,7 +127,7 @@ export class LandlordsService {
 
     const landlord = await this.prisma.landlord.update({
       where: { id },
-      data: data as any,
+      data: data,
     });
 
     this.logger.log(`Landlord mis à jour: ID ${id}`);
@@ -149,7 +149,9 @@ export class LandlordsService {
   // Supprimer un landlord
   async remove(id: number) {
     await this.findOne(id);
-    const count = await this.prisma.property.count({ where: { landlordId: id } });
+    const count = await this.prisma.property.count({
+      where: { landlordId: id },
+    });
     if (count > 0) {
       throw new ConflictException(
         `Cannot delete landlord: ${count} properties are still linked to it`,

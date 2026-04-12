@@ -1,4 +1,8 @@
-import { PropertyCategory, PropertyType, PropertyLayout } from './property.enums';
+import {
+  PropertyCategory,
+  PropertyType,
+  PropertyLayout,
+} from './property.enums';
 
 export const CATEGORY_TO_TYPES: Record<PropertyCategory, PropertyType[]> = {
   [PropertyCategory.COMMERCIAL_SALES]: [

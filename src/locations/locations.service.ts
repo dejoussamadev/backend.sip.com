@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateLocationDto } from './dto/create-location.dto';
 import { UpdateLocationDto } from './dto/update-location.dto';
@@ -77,7 +81,9 @@ export class LocationsService {
 
   async remove(id: number) {
     await this.findOne(id);
-    const count = await this.prisma.property.count({ where: { locationId: id } });
+    const count = await this.prisma.property.count({
+      where: { locationId: id },
+    });
     if (count > 0) {
       throw new ConflictException(
         `Cannot delete location: ${count} properties are still linked to it`,
@@ -91,7 +97,13 @@ export class LocationsService {
     await this.findOne(id);
     return this.prisma.property.findMany({
       where: { locationId: id },
-      include: { category: true, type: true, layout: true, user: true, landlord: true },
+      include: {
+        category: true,
+        type: true,
+        layout: true,
+        user: true,
+        landlord: true,
+      },
       orderBy: { updatedAt: 'desc' },
     });
   }

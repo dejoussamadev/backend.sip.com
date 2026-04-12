@@ -1,148 +1,127 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { NotificationType } from '@prisma/client';
+import { NotificationType, Role } from '@prisma/client';
 import { NotificationFilter } from './dto/get-notifications.dto';
-import { EmailService } from './email.service';
-import { Role } from '@prisma/client';
-import { normalizePagination } from '../common/utils/pagination.util';
+import { EmailService, EmailContext } from './email.service';
 import { NotificationsGateway } from './notifications.gateway';
+import { normalizePagination } from '../common/utils/pagination.util';
+import {
+  LOGIN_REQUEST_APPROVED,
+  LOGIN_REQUEST_CREATED,
+  LOGIN_REQUEST_REJECTED,
+} from './notification-types';
 
 @Injectable()
 export class NotificationsService {
   private readonly logger = new Logger(NotificationsService.name);
+  private readonly agentNotificationTypes: NotificationType[] = [
+    NotificationType.AGENT_CREATED,
+    NotificationType.AGENT_UPDATED,
+    NotificationType.AGENT_DELETED,
+    LOGIN_REQUEST_CREATED,
+    LOGIN_REQUEST_APPROVED,
+    LOGIN_REQUEST_REJECTED,
+  ];
+
+  private readonly propertyNotificationTypes: NotificationType[] = [
+    NotificationType.PROPERTY_CREATED,
+    NotificationType.PROPERTY_UPDATED,
+    NotificationType.PROPERTY_DELETED,
+  ];
 
   constructor(
-      private prisma: PrismaService,
-      private emailService: EmailService,
-      private notificationsGateway: NotificationsGateway,
-
+    private prisma: PrismaService,
+    private emailService: EmailService,
+    private notificationsGateway: NotificationsGateway,
   ) {}
 
-  // Create a notification (used internally)
-  async create(type: NotificationType, message: string) {
+  /**
+   * Single entry point for all notifications.
+   * Saves to DB, sends WebSocket to targeted users, and sends email.
+   */
+  async notify(params: {
+    type: NotificationType;
+    message: string;
+    emailContext?: EmailContext;
+    recipients?: {
+      admins?: boolean;
+      userIds?: number[];
+    };
+  }) {
+    const {
+      type,
+      message,
+      emailContext,
+      recipients = { admins: true, userIds: [] },
+    } = params;
+    const sendToAdmins = recipients.admins ?? true;
+    const recipientUserIds = recipients.userIds ?? [];
+
     const notification = await this.prisma.notification.create({
       data: { type, message },
     });
-    this.logger.log(`Notification created: [${type}] ${message}`);
-    this.notificationsGateway.broadcastNotification(notification);
+    this.logger.log(`Notification: [${type}] ${message}`);
+
+    const admins = sendToAdmins
+      ? await this.prisma.user.findMany({
+          where: { role: Role.ADMIN, isActive: true },
+          select: { id: true, email: true },
+        })
+      : [];
+
+    if (sendToAdmins) {
+      this.notificationsGateway.sendToAdmins(notification);
+    }
+
+    const extraRecipients = recipientUserIds.length
+      ? await this.prisma.user.findMany({
+          where: {
+            id: { in: recipientUserIds },
+            isActive: true,
+          },
+          select: { id: true, email: true, role: true },
+        })
+      : [];
+
+    for (const user of extraRecipients) {
+      if (!sendToAdmins || user.role !== Role.ADMIN) {
+        this.notificationsGateway.sendToUser(user.id, notification);
+      }
+    }
+
+    const emails = new Set<string>();
+
+    for (const admin of admins) {
+      if (admin.email) {
+        emails.add(admin.email);
+      }
+    }
+
+    for (const user of extraRecipients) {
+      if (user.email) {
+        emails.add(user.email);
+      }
+    }
+
+    if (emailContext && emails.size > 0) {
+      await this.emailService.sendNotificationEmail(
+        type,
+        Array.from(emails),
+        emailContext,
+      );
+    }
 
     return notification;
   }
 
-  // Notification: property created
-  async notifyPropertyCreated(referenceNumber: string, agentName: string) {
-    const now = new Date().toLocaleString('en-GB', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: false,
-    });
-    return this.create(
-        NotificationType.PROPERTY_CREATED,
-        `A new property with reference id ${referenceNumber} has been added by ${agentName} on ${now}.`,
-    );
-  }
+  // --- Read operations (used by controller) ---
 
-  // Send email to admins when a property is created by an agent
-  async sendPropertyCreatedEmail(payload: {
-    referenceNumber: string;
-    name: string;
-    agentName: string;
-    price?: number;
-    status?: string;
-  }) {
-    // Get all admins from the Agent table
-    const admins = await this.prisma.user.findMany({
-      where: {
-        role: Role.ADMIN,
-        isActive: true,
-      },
-      select: {
-        email: true,
-        name: true,
-      },
-    });
-
-    const recipients = admins.map((admin) => admin.email).filter(Boolean);
-
-    if (recipients.length === 0) {
-      this.logger.warn('No admin users found for email notification');
-      return;
-    }
-
-    this.logger.log(`Sending property creation email to admins: ${recipients.join(', ')}`);
-    await this.emailService.sendPropertyCreatedEmail(recipients, payload);
-  }
-
-  async sendLoginRequestEmail(payload: {
-    userName: string;
-    userEmail: string;
-    fingerprint: string;
-    deviceName?: string;
-    browser?: string;
-    operatingSystem?: string;
-    platform?: string;
-    ipAddress?: string | null;
-  }) {
-    const admins = await this.prisma.user.findMany({
-      where: {
-        role: Role.ADMIN,
-        isActive: true,
-      },
-      select: {
-        email: true,
-      },
-    });
-
-    const recipients = admins.map((admin) => admin.email).filter(Boolean);
-
-    if (recipients.length === 0) {
-      this.logger.warn('No admin users found for login request email notification');
-      return;
-    }
-
-    this.logger.log(`Sending login request email to admins: ${recipients.join(', ')}`);
-    await this.emailService.sendLoginRequestEmail(recipients, payload);
-  }
-
-  // Notification: property updated
-  async notifyPropertyUpdated(referenceNumber: string, agentName: string) {
-    const now = new Date().toLocaleString('en-GB', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: false,
-    });
-    return this.create(
-        NotificationType.PROPERTY_UPDATED,
-        `Property with reference id ${referenceNumber} has been updated by ${agentName} on ${now}.`,
-    );
-  }
-
-  // Notification: agent created
-  async notifyAgentCreated(agentName: string, agentCode: string) {
-    return this.create(
-        NotificationType.AGENT_CREATED,
-        `A new agent ${agentName} (${agentCode}) has been added. Check agents menu for more details.`,
-    );
-  }
-
-  // Notification: agent updated
-  async notifyAgentUpdated(agentName: string, agentCode: string) {
-    return this.create(
-        NotificationType.AGENT_UPDATED,
-        `Agent ${agentName} (${agentCode}) has been updated. Check agents menu for more details.`,
-    );
-  }
-
-  // Get all notifications with filters
-  async findAll(filter?: NotificationFilter, unreadOnly?: boolean, page = '1', limit = '20') {
+  async findAll(
+    filter?: NotificationFilter,
+    unreadOnly?: boolean,
+    page = '1',
+    limit = '20',
+  ) {
     const pagination = normalizePagination(page, limit, 20);
     const take = pagination.limit;
     const skip = pagination.skip;
@@ -156,11 +135,11 @@ export class NotificationsService {
     if (filter && filter !== NotificationFilter.ALL) {
       if (filter === NotificationFilter.PROPERTY) {
         where.type = {
-          in: [NotificationType.PROPERTY_CREATED, NotificationType.PROPERTY_UPDATED],
+          in: this.propertyNotificationTypes,
         };
       } else if (filter === NotificationFilter.AGENT) {
         where.type = {
-          in: [NotificationType.AGENT_CREATED, NotificationType.AGENT_UPDATED],
+          in: this.agentNotificationTypes,
         };
       }
     }
@@ -188,17 +167,18 @@ export class NotificationsService {
     };
   }
 
-  // Get property notifications only
-  async findPropertyNotifications(unreadOnly?: boolean, page = '1', limit = '20') {
+  async findPropertyNotifications(
+    unreadOnly?: boolean,
+    page = '1',
+    limit = '20',
+  ) {
     return this.findAll(NotificationFilter.PROPERTY, unreadOnly, page, limit);
   }
 
-  // Get agent notifications only
   async findAgentNotifications(unreadOnly?: boolean, page = '1', limit = '20') {
     return this.findAll(NotificationFilter.AGENT, unreadOnly, page, limit);
   }
 
-  // Mark a notification as read
   async markAsRead(id: number) {
     return this.prisma.notification.update({
       where: { id },
@@ -206,18 +186,17 @@ export class NotificationsService {
     });
   }
 
-  // Mark all notifications as read
   async markAllAsRead(filter?: NotificationFilter) {
     const where: any = { isRead: false };
 
     if (filter && filter !== NotificationFilter.ALL) {
       if (filter === NotificationFilter.PROPERTY) {
         where.type = {
-          in: [NotificationType.PROPERTY_CREATED, NotificationType.PROPERTY_UPDATED],
+          in: this.propertyNotificationTypes,
         };
       } else if (filter === NotificationFilter.AGENT) {
         where.type = {
-          in: [NotificationType.AGENT_CREATED, NotificationType.AGENT_UPDATED],
+          in: this.agentNotificationTypes,
         };
       }
     }
@@ -230,20 +209,23 @@ export class NotificationsService {
     return { marked: result.count };
   }
 
-  // Count unread notifications
   async countUnread() {
     const [total, properties, agents] = await Promise.all([
       this.prisma.notification.count({ where: { isRead: false } }),
       this.prisma.notification.count({
         where: {
           isRead: false,
-          type: { in: [NotificationType.PROPERTY_CREATED, NotificationType.PROPERTY_UPDATED] },
+          type: {
+            in: this.propertyNotificationTypes,
+          },
         },
       }),
       this.prisma.notification.count({
         where: {
           isRead: false,
-          type: { in: [NotificationType.AGENT_CREATED, NotificationType.AGENT_UPDATED] },
+          type: {
+            in: this.agentNotificationTypes,
+          },
         },
       }),
     ]);
@@ -251,12 +233,10 @@ export class NotificationsService {
     return { total, properties, agents };
   }
 
-  // Delete a notification
   async remove(id: number) {
     return this.prisma.notification.delete({ where: { id } });
   }
 
-  // Delete all read notifications
   async clearRead() {
     const result = await this.prisma.notification.deleteMany({
       where: { isRead: true },

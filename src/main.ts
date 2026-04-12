@@ -12,20 +12,20 @@ async function bootstrap() {
 
   // ✅ Validation globale des DTOs
   app.useGlobalPipes(
-      new ValidationPipe({
-        whitelist: true,           // Supprime les propriétés non définies dans le DTO
-        forbidNonWhitelisted: true, // Rejette les requêtes avec des propriétés inconnues
-        transform: true,           // Transforme automatiquement les types
-        transformOptions: {
-          enableImplicitConversion: true,
-        },
-      }),
+    new ValidationPipe({
+      whitelist: true, // Supprime les propriétés non définies dans le DTO
+      forbidNonWhitelisted: true, // Rejette les requêtes avec des propriétés inconnues
+      transform: true, // Transforme automatiquement les types
+      transformOptions: {
+        enableImplicitConversion: true,
+      },
+    }),
   );
 
   // ✅ CORS pour le frontend Angular
   const corsOrigins = process.env.CORS_ORIGINS
-      ? process.env.CORS_ORIGINS.split(',').map((o) => o.trim())
-      : ['http://localhost:4200'];
+    ? process.env.CORS_ORIGINS.split(',').map((o) => o.trim())
+    : ['http://localhost:4200'];
 
   app.enableCors({
     origin: corsOrigins,

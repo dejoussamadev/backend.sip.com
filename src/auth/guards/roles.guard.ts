@@ -33,7 +33,7 @@ export class RolesGuard implements CanActivate {
 
     if (!hasRole) {
       throw new ForbiddenException(
-          `Accès refusé. Rôle(s) requis: ${requiredRoles.join(', ')}. Votre rôle: ${user.role}`,
+        `Accès refusé. Rôle(s) requis: ${requiredRoles.join(', ')}. Votre rôle: ${user.role}`,
       );
     }
 

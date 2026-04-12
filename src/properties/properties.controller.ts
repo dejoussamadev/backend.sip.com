@@ -31,7 +31,10 @@ export class PropertiesController {
 
   private applyUploadedFiles(
     dto: CreatePropertyDto | UpdatePropertyDto,
-    files?: { images?: Express.Multer.File[]; documents?: Express.Multer.File[] },
+    files?: {
+      images?: Express.Multer.File[];
+      documents?: Express.Multer.File[];
+    },
   ) {
     if (files?.images?.length) {
       dto.imageUrls = files.images.map((f) => f.path);
@@ -143,7 +146,10 @@ export class PropertiesController {
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdatePropertyDto,
     @UploadedFiles()
-    files: { images?: Express.Multer.File[]; documents?: Express.Multer.File[] },
+    files: {
+      images?: Express.Multer.File[];
+      documents?: Express.Multer.File[];
+    },
     @Req() req: Request,
   ) {
     this.applyUploadedFiles(dto, files);
@@ -158,7 +164,10 @@ export class PropertiesController {
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: CreatePropertyDto,
     @UploadedFiles()
-    files: { images?: Express.Multer.File[]; documents?: Express.Multer.File[] },
+    files: {
+      images?: Express.Multer.File[];
+      documents?: Express.Multer.File[];
+    },
     @Req() req: Request,
   ) {
     this.applyUploadedFiles(dto, files);
@@ -168,7 +177,8 @@ export class PropertiesController {
 
   @Delete(':id')
   @Roles(Role.ADMIN)
-  remove(@Param('id', ParseIntPipe) id: number) {
-    return this.propertiesService.remove(id);
+  remove(@Param('id', ParseIntPipe) id: number, @Req() req: Request) {
+    const agentName = (req.user as any)?.name ?? 'Unknown';
+    return this.propertiesService.remove(id, agentName);
   }
 }

@@ -1,7 +1,21 @@
-import { IsString, IsOptional, IsNumber, IsInt, IsBoolean, IsArray, IsEnum, Min, Max, MinDate } from 'class-validator';
 import {
-  PropertyCategory, PropertyType, PropertyLayout,
-  BalconyOption, FurnishingOption,
+  IsString,
+  IsOptional,
+  IsNumber,
+  IsInt,
+  IsBoolean,
+  IsArray,
+  IsEnum,
+  Min,
+  Max,
+  MinDate,
+} from 'class-validator';
+import {
+  PropertyCategory,
+  PropertyType,
+  PropertyLayout,
+  BalconyOption,
+  FurnishingOption,
 } from '../constants/property.enums';
 import { PropertyAccess, PropertyStatus, PropertyView } from '@prisma/client';
 

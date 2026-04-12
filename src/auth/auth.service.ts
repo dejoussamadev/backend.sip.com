@@ -8,6 +8,7 @@ import { JwtService } from '@nestjs/jwt';
 import { LoginRequestStatus, User } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { Request } from 'express';
+import { LOGIN_REQUEST_CREATED } from '../notifications/notification-types';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { LoginDto } from './dto/login.dto';
@@ -41,7 +42,10 @@ export class AuthService {
       );
     }
 
-    const isPasswordValid = await bcrypt.compare(loginDto.password, user.password);
+    const isPasswordValid = await bcrypt.compare(
+      loginDto.password,
+      user.password,
+    );
 
     if (!isPasswordValid) {
       this.logger.warn(`Invalid password for ${email}`);
@@ -101,15 +105,22 @@ export class AuthService {
         `Created login request ${loginRequest.id} for ${user.email} on a new device`,
       );
 
-      await this.notificationsService.sendLoginRequestEmail({
-        userName: user.name,
-        userEmail: user.email,
-        fingerprint: loginDto.fingerprint,
-        deviceName: loginDto.deviceName,
-        browser: loginDto.browser,
-        operatingSystem: loginDto.operatingSystem,
-        platform: loginDto.platform,
-        ipAddress: this.resolveIpAddress(request),
+      await this.notificationsService.notify({
+        type: LOGIN_REQUEST_CREATED,
+        message: `Login request received from ${user.name} (${user.email}) for a new device.`,
+        emailContext: {
+          userName: user.name,
+          userEmail: user.email,
+          fingerprint: loginDto.fingerprint,
+          deviceName: loginDto.deviceName,
+          browser: loginDto.browser,
+          operatingSystem: loginDto.operatingSystem,
+          platform: loginDto.platform,
+          ipAddress: this.resolveIpAddress(request),
+        },
+        recipients: {
+          admins: true,
+        },
       });
 
       return {

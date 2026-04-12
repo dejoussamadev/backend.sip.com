@@ -42,7 +42,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
     if (!agent.isActive) {
       throw new UnauthorizedException(
-          'Votre compte est désactivé. Contactez l\'administrateur.',
+        "Votre compte est désactivé. Contactez l'administrateur.",
       );
     }
 

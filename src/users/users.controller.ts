@@ -45,7 +45,14 @@ export class UsersController {
     @Query('page') page = '1',
     @Query('limit') limit = '10',
   ) {
-    return this.usersService.findAll(user.id, keyword, role, status, page, limit);
+    return this.usersService.findAll(
+      user.id,
+      keyword,
+      role,
+      status,
+      page,
+      limit,
+    );
   }
 
   // Return the authenticated user's own profile.

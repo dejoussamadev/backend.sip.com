@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
@@ -85,7 +89,9 @@ export class CategoriesService {
 
   async remove(id: number) {
     await this.findOne(id);
-    const count = await this.prisma.property.count({ where: { categoryId: id } });
+    const count = await this.prisma.property.count({
+      where: { categoryId: id },
+    });
     if (count > 0) {
       throw new ConflictException(
         `Cannot delete category: ${count} properties are still linked to it`,
