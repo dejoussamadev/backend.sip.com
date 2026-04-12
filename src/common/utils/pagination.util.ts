@@ -9,9 +9,7 @@ export function normalizePagination(
   const parsedLimit = Number(limitInput);
 
   const page =
-    Number.isFinite(parsedPage) && parsedPage > 0
-      ? Math.floor(parsedPage)
-      : 1;
+    Number.isFinite(parsedPage) && parsedPage > 0 ? Math.floor(parsedPage) : 1;
   const requestedLimit =
     Number.isFinite(parsedLimit) && parsedLimit > 0
       ? Math.floor(parsedLimit)

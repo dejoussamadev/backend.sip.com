@@ -16,7 +16,7 @@ export class CreateLandlordDto {
   expiryDate: string;
 
   @IsEmail()
-  @IsNotEmpty({ message: 'L\'email est requis' })
+  @IsNotEmpty({ message: "L'email est requis" })
   email: string;
 
   @IsString()

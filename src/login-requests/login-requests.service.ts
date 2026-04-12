@@ -5,6 +5,11 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { LoginRequestStatus, Prisma } from '@prisma/client';
+import {
+  LOGIN_REQUEST_APPROVED,
+  LOGIN_REQUEST_REJECTED,
+} from '../notifications/notification-types';
+import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { normalizePagination } from '../common/utils/pagination.util';
 
@@ -32,7 +37,10 @@ export class LoginRequestsService {
     },
   } satisfies Prisma.LoginRequestInclude;
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notificationsService: NotificationsService,
+  ) {}
 
   async findAll(
     keyword?: string,
@@ -110,10 +118,16 @@ export class LoginRequestsService {
     const loginRequest = await this.findOne(id);
 
     if (loginRequest.status !== LoginRequestStatus.PENDING) {
-      throw new ConflictException('Only pending login requests can be approved');
+      throw new ConflictException(
+        'Only pending login requests can be approved',
+      );
     }
 
     const now = new Date();
+    const reviewer = await this.prisma.user.findUniqueOrThrow({
+      where: { id: reviewerId },
+      select: { id: true, name: true },
+    });
 
     await this.prisma.$transaction([
       this.prisma.trustedDevice.upsert({
@@ -154,6 +168,26 @@ export class LoginRequestsService {
       }),
     ]);
 
+    await this.notificationsService.notify({
+      type: LOGIN_REQUEST_APPROVED,
+      message: `Login request for ${loginRequest.user.name} (${loginRequest.user.email}) was approved by ${reviewer.name}.`,
+      emailContext: {
+        userName: loginRequest.user.name,
+        userEmail: loginRequest.user.email,
+        reviewerName: reviewer.name,
+        fingerprint: loginRequest.fingerprint,
+        deviceName: loginRequest.deviceName ?? undefined,
+        browser: loginRequest.browser ?? undefined,
+        operatingSystem: loginRequest.operatingSystem ?? undefined,
+        platform: loginRequest.platform ?? undefined,
+        ipAddress: loginRequest.ipAddress,
+      },
+      recipients: {
+        admins: true,
+        userIds: [loginRequest.userId],
+      },
+    });
+
     this.logger.log(`Login request ${id} approved by admin ${reviewerId}`);
     return this.findOne(id);
   }
@@ -162,8 +196,15 @@ export class LoginRequestsService {
     const loginRequest = await this.findOne(id);
 
     if (loginRequest.status !== LoginRequestStatus.PENDING) {
-      throw new ConflictException('Only pending login requests can be rejected');
+      throw new ConflictException(
+        'Only pending login requests can be rejected',
+      );
     }
+
+    const reviewer = await this.prisma.user.findUniqueOrThrow({
+      where: { id: reviewerId },
+      select: { id: true, name: true },
+    });
 
     await this.prisma.loginRequest.update({
       where: { id },
@@ -171,6 +212,26 @@ export class LoginRequestsService {
         status: LoginRequestStatus.REJECTED,
         reviewedById: reviewerId,
         reviewedAt: new Date(),
+      },
+    });
+
+    await this.notificationsService.notify({
+      type: LOGIN_REQUEST_REJECTED,
+      message: `Login request for ${loginRequest.user.name} (${loginRequest.user.email}) was rejected by ${reviewer.name}.`,
+      emailContext: {
+        userName: loginRequest.user.name,
+        userEmail: loginRequest.user.email,
+        reviewerName: reviewer.name,
+        fingerprint: loginRequest.fingerprint,
+        deviceName: loginRequest.deviceName ?? undefined,
+        browser: loginRequest.browser ?? undefined,
+        operatingSystem: loginRequest.operatingSystem ?? undefined,
+        platform: loginRequest.platform ?? undefined,
+        ipAddress: loginRequest.ipAddress,
+      },
+      recipients: {
+        admins: true,
+        userIds: [loginRequest.userId],
       },
     });
 

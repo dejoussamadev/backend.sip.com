@@ -7,9 +7,10 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateAgentDto } from './dto/create-agent.dto';
 import { UpdateAgentDto } from './dto/update-agent.dto';
-import { Prisma, Role } from '@prisma/client';
+import { NotificationType, Prisma, Role } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { normalizePagination } from '../common/utils/pagination.util';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class UsersService {
@@ -34,7 +35,10 @@ export class UsersService {
     updatedAt: true,
   };
 
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private notificationsService: NotificationsService,
+  ) {}
 
   // Ensure the user exists before running admin actions.
   private async findAgentByIdOrThrow(id: number) {
@@ -110,6 +114,13 @@ export class UsersService {
     }
 
     this.logger.log(`User created: ${agent.email} (${agent.agentCode})`);
+
+    await this.notificationsService.notify({
+      type: NotificationType.AGENT_CREATED,
+      message: `A new agent ${agent.name} (${agent.agentCode}) has been added.`,
+      emailContext: { agentName: agent.name, agentCode: agent.agentCode },
+    });
+
     return agent;
   }
 
@@ -227,6 +238,16 @@ export class UsersService {
     });
 
     this.logger.log(`User updated by admin: ${updatedAgent.email}`);
+
+    await this.notificationsService.notify({
+      type: NotificationType.AGENT_UPDATED,
+      message: `Agent ${updatedAgent.name} (${updatedAgent.agentCode}) has been updated.`,
+      emailContext: {
+        agentName: updatedAgent.name,
+        agentCode: updatedAgent.agentCode,
+      },
+    });
+
     return updatedAgent;
   }
 
@@ -257,6 +278,16 @@ export class UsersService {
     });
 
     this.logger.log(`User deleted: ${existingAgent.email}`);
+
+    await this.notificationsService.notify({
+      type: NotificationType.AGENT_DELETED,
+      message: `Agent ${existingAgent.name} (${existingAgent.agentCode}) has been deleted.`,
+      emailContext: {
+        agentName: existingAgent.name,
+        agentCode: existingAgent.agentCode,
+      },
+    });
+
     return { message: `User ${existingAgent.name} deleted successfully` };
   }
 }

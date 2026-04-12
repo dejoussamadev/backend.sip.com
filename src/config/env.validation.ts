@@ -15,20 +15,27 @@ export const envValidationSchema = Joi.object({
   SMTP_USER: Joi.string().allow(''),
   SMTP_PASS: Joi.string().allow(''),
   SMTP_FROM: Joi.string().email(),
-}).custom((value, helpers) => {
-  const smtpKeys = ['SMTP_HOST', 'SMTP_PORT', 'SMTP_USER', 'SMTP_PASS'] as const;
-  const hasAnySmtpConfig = smtpKeys.some((key) => {
-    const entry = value[key];
-    return entry !== undefined && entry !== '';
-  });
-
-  if (hasAnySmtpConfig && (!value.SMTP_HOST || !value.SMTP_PORT)) {
-    return helpers.error('any.custom', {
-      message: 'SMTP_HOST and SMTP_PORT are required when SMTP is configured',
+})
+  .custom((value, helpers) => {
+    const smtpKeys = [
+      'SMTP_HOST',
+      'SMTP_PORT',
+      'SMTP_USER',
+      'SMTP_PASS',
+    ] as const;
+    const hasAnySmtpConfig = smtpKeys.some((key) => {
+      const entry = value[key];
+      return entry !== undefined && entry !== '';
     });
-  }
 
-  return value;
-}, 'SMTP conditional validation').messages({
-  'any.custom': '{{#message}}',
-});
+    if (hasAnySmtpConfig && (!value.SMTP_HOST || !value.SMTP_PORT)) {
+      return helpers.error('any.custom', {
+        message: 'SMTP_HOST and SMTP_PORT are required when SMTP is configured',
+      });
+    }
+
+    return value;
+  }, 'SMTP conditional validation')
+  .messages({
+    'any.custom': '{{#message}}',
+  });

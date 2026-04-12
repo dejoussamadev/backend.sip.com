@@ -2,26 +2,26 @@ import { PrismaClient } from '@prisma/client';
 
 // Codes pour les catégories (basés sur le nom en DB)
 const CAT_CODE: Record<string, string> = {
-  'residential sales':    'RS',
-  'residential rentals':  'RL',
-  'commercial sales':     'CS',
-  'commercial rentals':   'CL',
+  'residential sales': 'RS',
+  'residential rentals': 'RL',
+  'commercial sales': 'CS',
+  'commercial rentals': 'CL',
 };
 
 // Codes pour les types (basés sur le nom en DB)
 const TYPE_CODE: Record<string, string> = {
-  'apartment':          'A',
-  'compound villa':     'CV',
-  'stand alone villa':  'SA',
-  'villa':              'V',
-  'penthouse':          'PH',
-  'townhouse':          'TH',
-  'office':             'OF',
-  'shop':               'SH',
-  'warehouse':          'WH',
-  'whole building':     'WB',
-  'labor camp':         'LC',
-  'land':               'LD',
+  apartment: 'A',
+  'compound villa': 'CV',
+  'stand alone villa': 'SA',
+  villa: 'V',
+  penthouse: 'PH',
+  townhouse: 'TH',
+  office: 'OF',
+  shop: 'SH',
+  warehouse: 'WH',
+  'whole building': 'WB',
+  'labor camp': 'LC',
+  land: 'LD',
 };
 
 export async function generateRef(

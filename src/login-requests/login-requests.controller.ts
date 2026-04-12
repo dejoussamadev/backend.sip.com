@@ -39,19 +39,13 @@ export class LoginRequestsController {
 
   @Patch(':id/approve')
   @Roles(Role.ADMIN)
-  approve(
-    @Param('id', ParseIntPipe) id: number,
-    @CurrentUser() user: any,
-  ) {
+  approve(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: any) {
     return this.loginRequestsService.approve(id, user.id);
   }
 
   @Patch(':id/reject')
   @Roles(Role.ADMIN)
-  reject(
-    @Param('id', ParseIntPipe) id: number,
-    @CurrentUser() user: any,
-  ) {
+  reject(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: any) {
     return this.loginRequestsService.reject(id, user.id);
   }
 }

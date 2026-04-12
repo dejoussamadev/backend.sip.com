@@ -7,15 +7,15 @@ import { UploadController } from './upload.controller';
 import { UPLOAD_CONSTANTS } from './constants/upload.constants';
 
 @Module({
-    imports: [
-        ServeStaticModule.forRoot({
-            rootPath: join(process.cwd(), 'uploads'),
-            serveRoot: '/uploads',
-        }),
-        MulterModule.register({ dest: UPLOAD_CONSTANTS.IMAGE_DEST }),
-    ],
-    controllers: [UploadController],
-    providers: [UploadService],
-    exports: [UploadService, MulterModule],
+  imports: [
+    ServeStaticModule.forRoot({
+      rootPath: join(process.cwd(), 'uploads'),
+      serveRoot: '/uploads',
+    }),
+    MulterModule.register({ dest: UPLOAD_CONSTANTS.IMAGE_DEST }),
+  ],
+  controllers: [UploadController],
+  providers: [UploadService],
+  exports: [UploadService, MulterModule],
 })
 export class UploadModule {}
