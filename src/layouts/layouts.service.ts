@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateLayoutDto } from './dto/create-layout.dto';
 import { UpdateLayoutDto } from './dto/update-layout.dto';
@@ -82,6 +82,12 @@ export class LayoutsService {
 
   async remove(id: number) {
     await this.findOne(id);
+    const count = await this.prisma.property.count({ where: { layoutId: id } });
+    if (count > 0) {
+      throw new ConflictException(
+        `Cannot delete layout: ${count} properties are still linked to it`,
+      );
+    }
     return this.prisma.layout.delete({ where: { id } });
   }
 
