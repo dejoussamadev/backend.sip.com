@@ -3,6 +3,7 @@ import {
   NotFoundException,
   Logger,
   BadRequestException,
+  ConflictException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateLandlordDto } from './dto/create-landlord.dto';
@@ -148,6 +149,12 @@ export class LandlordsService {
   // Supprimer un landlord
   async remove(id: number) {
     await this.findOne(id);
+    const count = await this.prisma.property.count({ where: { landlordId: id } });
+    if (count > 0) {
+      throw new ConflictException(
+        `Cannot delete landlord: ${count} properties are still linked to it`,
+      );
+    }
     await this.prisma.landlord.delete({ where: { id } });
     this.logger.log(`Landlord supprimé: ID ${id}`);
     return { message: `Landlord #${id} supprimé avec succès` };

@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTypeDto } from './dto/create-type.dto';
 import { UpdateTypeDto } from './dto/update-type.dto';
@@ -85,6 +85,12 @@ export class TypesService {
 
   async remove(id: number) {
     await this.findOne(id);
+    const count = await this.prisma.property.count({ where: { typeId: id } });
+    if (count > 0) {
+      throw new ConflictException(
+        `Cannot delete type: ${count} properties are still linked to it`,
+      );
+    }
     return this.prisma.type.delete({ where: { id } });
   }
 
