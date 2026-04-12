@@ -5,6 +5,7 @@ import { NotificationFilter } from './dto/get-notifications.dto';
 import { EmailService } from './email.service';
 import { Role } from '@prisma/client';
 import { normalizePagination } from '../common/utils/pagination.util';
+import { NotificationsGateway } from './notifications.gateway';
 
 @Injectable()
 export class NotificationsService {
@@ -13,6 +14,8 @@ export class NotificationsService {
   constructor(
       private prisma: PrismaService,
       private emailService: EmailService,
+      private notificationsGateway: NotificationsGateway,
+
   ) {}
 
   // Create a notification (used internally)
@@ -21,6 +24,8 @@ export class NotificationsService {
       data: { type, message },
     });
     this.logger.log(`Notification created: [${type}] ${message}`);
+    this.notificationsGateway.broadcastNotification(notification);
+
     return notification;
   }
 
