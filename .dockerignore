@@ -1,0 +1,32 @@
+# deps / build output
+node_modules
+dist
+
+# secrets — never bake into an image layer
+.env
+.env.*
+!.env.exemple
+!.env.production.example
+
+# vcs / editor / logs
+.git
+.gitignore
+.idea
+.vscode
+*.log
+
+# test artifacts
+coverage
+.nyc_output
+
+# runtime data — mounted as a volume in prod, never shipped in image
+uploads
+
+# OS cruft
+.DS_Store
+Thumbs.db
+
+# docs / CI that don't need to ship
+README.md
+*.md
+.github
