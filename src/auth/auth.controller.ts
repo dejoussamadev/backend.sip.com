@@ -43,6 +43,25 @@ function parseExpirationToMs(expiration: string): number {
 
 const COOKIE_MAX_AGE = parseExpirationToMs(JWT_EXPIRATION);
 
+/**
+ * Cookie attributes are env-driven so the same build runs against HTTP
+ * (initial prod deploy, no TLS yet) and HTTPS (after TLS is wired up)
+ * without code changes.
+ *
+ *   COOKIE_SECURE   = 'true' | 'false'  (default: false)
+ *   COOKIE_SAMESITE = 'lax' | 'strict' | 'none' (default: 'lax')
+ *
+ * With the nginx reverse proxy in front, client and api share one origin,
+ * so `lax` + `secure=false` is enough for HTTP. Flip to `secure=true` and
+ * keep `lax` once TLS is in place. Use `none` only if you ever re-introduce
+ * a cross-origin deployment (and then `secure=true` is mandatory).
+ */
+const COOKIE_SECURE = process.env.COOKIE_SECURE === 'true';
+const COOKIE_SAMESITE = (process.env.COOKIE_SAMESITE ?? 'lax') as
+  | 'lax'
+  | 'strict'
+  | 'none';
+
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
@@ -69,8 +88,8 @@ export class AuthController {
     };
     response.cookie('access_token', accessToken, {
       httpOnly: true,
-      secure: true,
-      sameSite: 'none',
+      secure: COOKIE_SECURE,
+      sameSite: COOKIE_SAMESITE,
       path: '/',
       maxAge: COOKIE_MAX_AGE,
     });
@@ -93,8 +112,8 @@ export class AuthController {
   ) {
     response.clearCookie('access_token', {
       httpOnly: true,
-      secure: true,
-      sameSite: 'none',
+      secure: COOKIE_SECURE,
+      sameSite: COOKIE_SAMESITE,
       path: '/',
     });
 

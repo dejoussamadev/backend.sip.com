@@ -7,6 +7,12 @@ async function bootstrap() {
   const logger = new Logger('Bootstrap');
   const app = await NestFactory.create(AppModule);
 
+  // Trust the first hop proxy (nginx in the prod `client` container). Lets
+  // Express read X-Forwarded-Proto / X-Forwarded-For so `req.protocol` and
+  // `req.ip` reflect the original client request instead of the internal
+  // hop, which matters for upload URL building and rate-limit accounting.
+  app.getHttpAdapter().getInstance().set('trust proxy', 1);
+
   // ✅ Cookie parser for httpOnly JWT cookies
   app.use(cookieParser());
 
