@@ -12,6 +12,7 @@ import { NotificationsService } from './notifications.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Role } from '@prisma/client';
 import { NotificationFilter } from './dto/get-notifications.dto';
 
@@ -21,15 +22,16 @@ import { NotificationFilter } from './dto/get-notifications.dto';
 export class NotificationsController {
   constructor(private readonly notificationsService: NotificationsService) {}
 
-  // GET /notifications - toutes les notifications
   @Get()
   findAll(
+    @CurrentUser('id') userId: number,
     @Query('filter') filter?: NotificationFilter,
     @Query('unreadOnly') unreadOnly?: string,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
   ) {
     return this.notificationsService.findAll(
+      userId,
       filter,
       unreadOnly === 'true',
       page,
@@ -37,63 +39,67 @@ export class NotificationsController {
     );
   }
 
-  // GET /notifications/properties - notifications des properties
   @Get('properties')
   findPropertyNotifications(
+    @CurrentUser('id') userId: number,
     @Query('unreadOnly') unreadOnly?: string,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
   ) {
     return this.notificationsService.findPropertyNotifications(
+      userId,
       unreadOnly === 'true',
       page,
       limit,
     );
   }
 
-  // GET /notifications/users - notifications des users
   @Get('agents')
   findAgentNotifications(
+    @CurrentUser('id') userId: number,
     @Query('unreadOnly') unreadOnly?: string,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
   ) {
     return this.notificationsService.findAgentNotifications(
+      userId,
       unreadOnly === 'true',
       page,
       limit,
     );
   }
 
-  // GET /notifications/unread-count - compteur de non lues
   @Get('unread-count')
-  countUnread() {
-    return this.notificationsService.countUnread();
+  countUnread(@CurrentUser('id') userId: number) {
+    return this.notificationsService.countUnread(userId);
   }
 
-  // PATCH /notifications/mark-all-read - marquer toutes comme lues
   @Patch('mark-all-read')
-  markAllAsRead(@Query('filter') filter?: NotificationFilter) {
-    return this.notificationsService.markAllAsRead(filter);
+  markAllAsRead(
+    @CurrentUser('id') userId: number,
+    @Query('filter') filter?: NotificationFilter,
+  ) {
+    return this.notificationsService.markAllAsRead(userId, filter);
   }
 
-  // DELETE /notifications/clear-read - supprimer les notifications lues
   @Delete('clear-read')
-  @Roles(Role.ADMIN)
-  clearRead() {
-    return this.notificationsService.clearRead();
+  clearRead(@CurrentUser('id') userId: number) {
+    return this.notificationsService.clearRead(userId);
   }
 
-  // PATCH /notifications/:id/read - marquer une notification comme lue
   @Patch(':id/read')
-  markAsRead(@Param('id', ParseIntPipe) id: number) {
-    return this.notificationsService.markAsRead(id);
+  markAsRead(
+    @CurrentUser('id') userId: number,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    return this.notificationsService.markAsRead(userId, id);
   }
 
-  // DELETE /notifications/:id - supprimer une notification
   @Delete(':id')
-  @Roles(Role.ADMIN)
-  remove(@Param('id', ParseIntPipe) id: number) {
-    return this.notificationsService.remove(id);
+  remove(
+    @CurrentUser('id') userId: number,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    return this.notificationsService.remove(userId, id);
   }
 }

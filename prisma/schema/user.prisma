@@ -25,6 +25,7 @@ model User {
   trustedDevices      TrustedDevice[]
   loginRequests       LoginRequest[] @relation("UserLoginRequests")
   reviewedLoginRequests LoginRequest[] @relation("LoginRequestReviewer")
+  notificationRecipients NotificationRecipient[]
 
   @@map("users")
 }

@@ -58,6 +58,9 @@ export class PropertiesController {
   ) {
     this.applyUploadedFiles(dto, files);
     const user = req.user as any;
+    if (!dto.agentId && user?.id) {
+      dto.agentId = user.id;
+    }
     const agentName = user?.name ?? 'Unknown';
     const userRole = user?.role as Role | undefined;
     if (userRole === Role.AGENT) {

@@ -208,7 +208,7 @@ async function seedUsers(imageAssets: SeedAssets): Promise<NamedRecord[]> {
                         'Real Estate Advisor',
                     ]),
                     role: Role.AGENT,
-                    isActive: faker.datatype.boolean(),
+                    isActive: true,
                     photo: imageFromPool(
                         imageAssets.agentPhotos,
                         index + 5,
