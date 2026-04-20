@@ -41,10 +41,8 @@ async function fetchPexelsPhotos(options: {
   query: string;
   orientation?: 'landscape' | 'portrait' | 'square';
 }): Promise<PexelsPhoto[]> {
-  const apiKey = process.env.PEXELS_API_KEY;
-  if (!apiKey || options.count <= 0) {
-    return [];
-  }
+  const apiKey = process.env.PEXELS_API_KEY ?? 'oRUlIKQrjaMw4scf2oomBbudrGvzJUJY8umJh37nfJWwBT6wXCejka6T';
+  if (options.count <= 0) return [];
 
   const params = new URLSearchParams({
     query: options.query,
@@ -66,14 +64,16 @@ async function fetchPexelsPhotos(options: {
     );
 
     if (!response.ok) {
-      throw new Error(`Pexels responded with ${response.status}`);
+      throw new Error(`Pexels responded with HTTP ${response.status}: ${await response.text()}`);
     }
 
     const payload = (await response.json()) as { photos?: PexelsPhoto[] };
-    return (payload.photos ?? []).slice(0, options.count);
-  } catch {
+    const photos = (payload.photos ?? []).slice(0, options.count);
+    console.log(`  ✓ Pexels returned ${photos.length} photos for "${options.query}"`);
+    return photos;
+  } catch (err) {
     console.warn(
-      `  ! Pexels fetch failed for "${options.query}", falling back to local placeholders.`,
+      `  ! Pexels fetch failed for "${options.query}": ${err instanceof Error ? err.message : String(err)}. Falling back to placeholder paths.`,
     );
     return [];
   }
@@ -90,7 +90,7 @@ async function downloadImageToUploads(options: {
     const response = await fetch(options.url);
 
     if (!response.ok) {
-      throw new Error(`Image download responded with ${response.status}`);
+      throw new Error(`Image download responded with HTTP ${response.status}`);
     }
 
     const extension = extensionFromContentType(
@@ -101,10 +101,11 @@ async function downloadImageToUploads(options: {
     const arrayBuffer = await response.arrayBuffer();
 
     await fs.writeFile(filePath, Buffer.from(arrayBuffer));
+    console.log(`    ↓ Written: ${filePath}  →  DB path: ${seededUploadPath('images', filename)}`);
 
     return seededUploadPath('images', filename);
-  } catch {
-    console.warn(`  ! Failed to download image "${options.filenameBase}".`);
+  } catch (err) {
+    console.warn(`  ! Failed to download image "${options.filenameBase}": ${err instanceof Error ? err.message : String(err)}`);
     return null;
   }
 }
@@ -151,10 +152,13 @@ async function removeSeededFiles(
     await Promise.all(
       seededFiles.map((filename) => fs.unlink(path.join(targetDir, filename))),
     );
+    if (seededFiles.length > 0) {
+      console.log(`  ✓ Removed ${seededFiles.length} old seed files from ${targetDir}`);
+    }
   } catch (error: any) {
     if (error?.code !== 'ENOENT') {
       console.warn(
-        `  ! Failed to clean seeded files in ${dirSegments.join('/')}.`,
+        `  ! Failed to clean seeded files in ${targetDir}: ${error?.message ?? String(error)}`,
       );
     }
   }
@@ -248,6 +252,8 @@ async function preparePdfSeries(options: {
 }
 
 export async function prepareSeedAssets(): Promise<SeedAssets> {
+  console.log(`  → process.cwd() = ${process.cwd()}`);
+  console.log(`  → Resolved uploads root: ${path.resolve(process.cwd(), 'uploads')}`);
   await Promise.all([
     removeSeededFiles(
       ['uploads', 'images'],
@@ -260,29 +266,26 @@ export async function prepareSeedAssets(): Promise<SeedAssets> {
     removeSeededFiles(['uploads', 'documents'], ['seed-property-document-']),
   ]);
 
-  const imageApiKey = process.env.PEXELS_API_KEY;
-  const imagePromise = imageApiKey
-    ? Promise.all([
-        prepareDownloadedImages({
-          count: 11,
-          query: 'real estate agent portrait',
-          orientation: 'portrait',
-          filenamePrefix: 'seed-agent',
-        }),
-        prepareDownloadedImages({
-          count: 10,
-          query: 'business owner portrait',
-          orientation: 'portrait',
-          filenamePrefix: 'seed-landlord',
-        }),
-        prepareDownloadedImages({
-          count: 30,
-          query: 'luxury apartment interior',
-          orientation: 'landscape',
-          filenamePrefix: 'seed-property',
-        }),
-      ])
-    : Promise.resolve([[], [], []] as [string[], string[], string[]]);
+  const imagePromise = Promise.all([
+    prepareDownloadedImages({
+      count: 11,
+      query: 'real estate agent portrait',
+      orientation: 'portrait',
+      filenamePrefix: 'seed-agent',
+    }),
+    prepareDownloadedImages({
+      count: 10,
+      query: 'business owner portrait',
+      orientation: 'portrait',
+      filenamePrefix: 'seed-landlord',
+    }),
+    prepareDownloadedImages({
+      count: 30,
+      query: 'luxury apartment interior',
+      orientation: 'landscape',
+      filenamePrefix: 'seed-property',
+    }),
+  ]);
 
   const pdfPromise = Promise.all([
     preparePdfSeries({
@@ -324,6 +327,25 @@ export async function prepareSeedAssets(): Promise<SeedAssets> {
     [agentPhotos, landlordPhotos, propertyImages],
     [landlordAgreements, landlordContracts, propertyDocuments],
   ] = await Promise.all([imagePromise, pdfPromise]);
+
+  const warn = ' ⚠ empty — placeholder paths will be stored';
+  console.log('  → Asset summary:');
+  console.log(
+    `      agentPhotos:       ${agentPhotos.length} files${agentPhotos.length === 0 ? warn : ''}`,
+  );
+  console.log(
+    `      landlordPhotos:    ${landlordPhotos.length} files${landlordPhotos.length === 0 ? warn : ''}`,
+  );
+  console.log(
+    `      propertyImages:    ${propertyImages.length} files${propertyImages.length === 0 ? warn : ''}`,
+  );
+  console.log(`      landlordAgreements: ${landlordAgreements.length} PDFs`);
+  console.log(`      landlordContracts:  ${landlordContracts.length} PDFs`);
+  console.log(`      propertyDocuments:  ${propertyDocuments.length} PDFs`);
+  if (agentPhotos.length > 0)
+    console.log(`      sample agentPhoto: ${agentPhotos[0]}`);
+  if (landlordAgreements.length > 0)
+    console.log(`      sample agreement:  ${landlordAgreements[0]}`);
 
   return {
     agentPhotos,
