@@ -1,6 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 import * as nodemailer from 'nodemailer';
 import { NotificationType } from '@prisma/client';
+import {
+  LOGIN_REQUEST_APPROVED,
+  LOGIN_REQUEST_CREATED,
+  LOGIN_REQUEST_REJECTED,
+} from './notification-types';
 
 export interface EmailContext {
   referenceNumber?: string;
@@ -21,7 +26,7 @@ export interface EmailContext {
 }
 
 const EMAIL_TEMPLATES: Record<
-  NotificationType,
+  string,
   { subject: string; buildBody: (ctx: EmailContext) => string }
 > = {
   [NotificationType.PROPERTY_CREATED]: {
@@ -105,7 +110,7 @@ const EMAIL_TEMPLATES: Record<
         .filter(Boolean)
         .join('\n'),
   },
-  LOGIN_REQUEST_CREATED: {
+  [LOGIN_REQUEST_CREATED]: {
     subject: 'New Device Login Request',
     buildBody: (ctx) =>
       [
@@ -124,7 +129,7 @@ const EMAIL_TEMPLATES: Record<
         .filter(Boolean)
         .join('\n'),
   },
-  LOGIN_REQUEST_APPROVED: {
+  [LOGIN_REQUEST_APPROVED]: {
     subject: 'Your Login Request Was Approved',
     buildBody: (ctx) =>
       [
@@ -143,7 +148,7 @@ const EMAIL_TEMPLATES: Record<
         .filter(Boolean)
         .join('\n'),
   },
-  LOGIN_REQUEST_REJECTED: {
+  [LOGIN_REQUEST_REJECTED]: {
     subject: 'Your Login Request Was Rejected',
     buildBody: (ctx) =>
       [
