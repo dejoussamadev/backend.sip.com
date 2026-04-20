@@ -346,7 +346,7 @@ async function seedProperties(ctx: {
                                 {length: faker.number.int({min: 4, max: 6})},
                                 (_, imageIndex) =>
                                     seededUploadPath(
-                                        'properties',
+                                        'images',
                                         `property-${i + 1}-image-${imageIndex + 1}.jpg`,
                                     ),
                             ),
