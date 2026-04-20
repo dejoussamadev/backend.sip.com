@@ -1,0 +1,38 @@
+enum NotificationType {
+  PROPERTY_CREATED
+  PROPERTY_UPDATED
+  PROPERTY_DELETED
+  AGENT_CREATED
+  AGENT_UPDATED
+  AGENT_DELETED
+  LOGIN_REQUEST_CREATED
+  LOGIN_REQUEST_APPROVED
+  LOGIN_REQUEST_REJECTED
+}
+
+model Notification {
+  id        Int              @id @default(autoincrement())
+  type      NotificationType
+  message   String
+  createdAt DateTime         @default(now())
+
+  recipients NotificationRecipient[]
+
+  @@map("notifications")
+}
+
+model NotificationRecipient {
+  id             Int      @id @default(autoincrement())
+  userId         Int
+  notificationId Int
+  isRead         Boolean  @default(false)
+  readAt         DateTime?
+  createdAt      DateTime @default(now())
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  notification Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, notificationId])
+  @@index([userId, isRead])
+  @@map("notification_recipients")
+}

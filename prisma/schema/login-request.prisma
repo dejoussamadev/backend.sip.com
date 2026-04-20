@@ -1,0 +1,51 @@
+enum LoginRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model TrustedDevice {
+  id             Int      @id @default(autoincrement())
+  userId         Int
+  fingerprint    String
+  deviceName     String?
+  browser        String?
+  operatingSystem String?
+  platform       String?
+  userAgent      String?
+  ipAddress      String?
+  lastUsedAt     DateTime @default(now())
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, fingerprint])
+  @@index([userId])
+  @@map("trusted_devices")
+}
+
+model LoginRequest {
+  id              Int                @id @default(autoincrement())
+  userId          Int
+  fingerprint     String
+  deviceName      String?
+  browser         String?
+  operatingSystem String?
+  platform        String?
+  userAgent       String?
+  ipAddress       String?
+  status          LoginRequestStatus @default(PENDING)
+  reviewedById    Int?
+  reviewedAt      DateTime?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  user       User  @relation("UserLoginRequests", fields: [userId], references: [id], onDelete: Cascade)
+  reviewedBy User? @relation("LoginRequestReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@index([userId, status])
+  @@index([fingerprint])
+  @@index([reviewedById])
+  @@map("login_requests")
+}

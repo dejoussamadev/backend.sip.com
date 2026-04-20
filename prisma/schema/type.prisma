@@ -1,0 +1,21 @@
+model Type {
+  id   Int    @id @default(autoincrement())
+  name String @unique
+
+  categories CategoryType[]
+  layouts    TypeLayout[]
+  properties Property[]
+
+  @@map("types")
+}
+
+model TypeLayout {
+  typeId   Int
+  layoutId Int
+
+  type   Type   @relation(fields: [typeId], references: [id], onDelete: Cascade)
+  layout Layout @relation(fields: [layoutId], references: [id], onDelete: Cascade)
+
+  @@id([typeId, layoutId])
+  @@map("type_layouts")
+}

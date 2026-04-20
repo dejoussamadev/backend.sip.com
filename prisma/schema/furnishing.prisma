@@ -1,0 +1,9 @@
+model Furnishing {
+  id   Int    @id @default(autoincrement())
+  name String @unique
+
+  categories CategoryFurnishing[]
+  properties Property[]
+
+  @@map("furnishings")
+}

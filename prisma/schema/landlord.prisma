@@ -1,0 +1,21 @@
+// prisma/schema/landlord.prisma
+model Landlord {
+  id                     Int      @id @default(autoincrement())
+  name                   String
+  expiryDate             DateTime
+  email                  String
+  countryCode            String   @default("+974")
+  mobile                 String
+  photo                  String?
+  alternativeCountryCode String?
+  alternativeMobile      String?
+  note                   String?
+  mapLink                String
+  marketingAgreement     String
+  draftContract          String
+
+  properties Property[]
+
+  @@index([email])
+  @@map("landlords")
+}

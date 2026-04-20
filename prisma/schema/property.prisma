@@ -1,0 +1,90 @@
+enum PropertyStatus {
+  AVAILABLE
+  PENDING
+  NOT_AVAILABLE
+  ON_HOLD
+  UPCOMING
+  ARCHIVED
+  TRASH
+  REJECTED
+}
+
+enum PropertyAccess {
+  CALL_APPOINTMENT
+  DIRECT_APPOINTMENT
+  EMAIL_APPOINTMENT
+}
+
+enum PropertyView {
+  BEACH
+  CITY
+  COMMUNITY
+  FACILITIES
+  FULL_SEA
+  MARINA
+  MIXED
+  PARTIAL_MARINA
+  PARTIAL_SEA
+}
+
+model Property {
+  id              Int             @id @default(autoincrement())
+  referenceNumber String          @unique
+  name            String
+  shortTerm       Boolean         @default(false)
+  unitNumber      String?
+  bathrooms       Int
+  size            Float
+  maidRoom        Boolean
+  balcony         String          @default("")
+  view            PropertyView?
+  range           Decimal @db.Decimal(15, 2)
+  commission      Decimal @db.Decimal(5, 2)
+  status          PropertyStatus  @default(PENDING)
+  expirationDate  DateTime?
+  access          PropertyAccess?
+  hasUtilities    Boolean         @default(false)
+  hasFacilities   Boolean         @default(false)
+  details         String
+  directions      String
+  images          String[]
+  document        String?
+
+  // Relations
+  categoryId Int
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  typeId Int
+  type   Type @relation(fields: [typeId], references: [id], onDelete: Restrict)
+
+  layoutId Int
+  layout   Layout @relation(fields: [layoutId], references: [id], onDelete: Restrict)
+
+  locationId Int
+  location   Location @relation(fields: [locationId], references: [id], onDelete: Restrict)
+
+  furnishingId Int
+  furnishing   Furnishing @relation(fields: [furnishingId], references: [id], onDelete: Restrict)
+
+  landlordId Int
+  landlord   Landlord @relation(fields: [landlordId], references: [id], onDelete: Restrict)
+
+  userId Int
+  user   User @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  utilities  PropertyUtility[]
+  facilities PropertyFacility[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([categoryId])
+  @@index([typeId])
+  @@index([layoutId])
+  @@index([locationId])
+  @@index([userId])
+  @@index([furnishingId])
+  @@index([landlordId])
+  @@index([status, expirationDate])
+  @@map("properties")
+}

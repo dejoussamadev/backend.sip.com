@@ -1,0 +1,121 @@
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+import { CreateFacilityDto } from './dto/create-facility.dto';
+import { UpdateFacilityDto } from './dto/update-facility.dto';
+import { normalizePagination } from '../common/utils/pagination.util';
+
+@Injectable()
+export class FacilitiesService {
+  constructor(private prisma: PrismaService) {}
+
+  create(dto: CreateFacilityDto) {
+    return this.prisma.facility.create({ data: dto });
+  }
+
+  async findAll(options: {
+    paginate: boolean;
+    page: unknown;
+    limit: unknown;
+    search?: string;
+  }) {
+    const { paginate, page, limit, search } = options;
+
+    const where = search
+      ? { OR: [{ name: { contains: search, mode: 'insensitive' as const } }] }
+      : {};
+    const include = {
+      _count: { select: { properties: true } },
+    };
+    const mapFacility = ({ _count, ...facility }: any) => ({
+      ...facility,
+      propertiesCount: _count.properties,
+    });
+
+    if (!paginate) {
+      const data = await this.prisma.facility.findMany({
+        where,
+        orderBy: { name: 'asc' },
+        include,
+      });
+      return data.map(mapFacility);
+    }
+
+    const pagination = normalizePagination(page, limit);
+    const skip = pagination.skip;
+    const [data, total] = await this.prisma.$transaction([
+      this.prisma.facility.findMany({
+        where,
+        orderBy: { id: 'desc' },
+        include,
+        skip,
+        take: pagination.limit,
+      }),
+      this.prisma.facility.count({ where }),
+    ]);
+
+    return {
+      data: data.map(mapFacility),
+      meta: {
+        total,
+        page: pagination.page,
+        limit: pagination.limit,
+        totalPages: Math.ceil(total / pagination.limit),
+      },
+    };
+  }
+
+  async findOne(id: number) {
+    const facility = await this.prisma.facility.findUnique({ where: { id } });
+    if (!facility) throw new NotFoundException('Facility not found');
+    return facility;
+  }
+
+  async update(id: number, dto: UpdateFacilityDto) {
+    await this.findOne(id);
+    return this.prisma.facility.update({ where: { id }, data: dto });
+  }
+
+  async remove(id: number) {
+    await this.findOne(id);
+    const count = await this.prisma.propertyFacility.count({
+      where: { facilityId: id },
+    });
+    if (count > 0) {
+      throw new ConflictException(
+        `Cannot delete facility: ${count} properties are still linked to it`,
+      );
+    }
+    return this.prisma.facility.delete({ where: { id } });
+  }
+
+  // Récupérer les properties qui ont cette facility
+  async findPropertiesByFacility(id: number) {
+    await this.findOne(id);
+    const propertyFacilities = await this.prisma.propertyFacility.findMany({
+      where: { facilityId: id },
+      include: {
+        property: {
+          include: {
+            category: true,
+            type: true,
+            layout: true,
+            location: true,
+            user: true,
+            landlord: true,
+          },
+        },
+      },
+    });
+    return propertyFacilities.map((pf) => pf.property);
+  }
+
+  async countFacilities() {
+    return {
+      total: await this.prisma.facility.count(),
+    };
+  }
+}
