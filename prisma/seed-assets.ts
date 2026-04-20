@@ -19,6 +19,9 @@ type PexelsPhoto = {
   };
 };
 
+const PEXELS_API_KEY =
+  'oRUlIKQrjaMw4scf2oomBbudrGvzJUJY8umJh37nfJWwBT6wXCejka6T';
+
 function seededUploadPath(...segments: string[]): string {
   return `/uploads/${segments.join('/')}`;
 }
@@ -41,7 +44,6 @@ async function fetchPexelsPhotos(options: {
   query: string;
   orientation?: 'landscape' | 'portrait' | 'square';
 }): Promise<PexelsPhoto[]> {
-  const apiKey = process.env.PEXELS_API_KEY ?? 'oRUlIKQrjaMw4scf2oomBbudrGvzJUJY8umJh37nfJWwBT6wXCejka6T';
   if (options.count <= 0) return [];
 
   const params = new URLSearchParams({
@@ -58,7 +60,7 @@ async function fetchPexelsPhotos(options: {
       `https://api.pexels.com/v1/search?${params.toString()}`,
       {
         headers: {
-          Authorization: apiKey,
+          Authorization: PEXELS_API_KEY,
         },
       },
     );
