@@ -162,42 +162,45 @@ export class PropertiesService {
       ? Number(dto.furnishingId)
       : undefined;
 
+    const createData: any = {
+      referenceNumber,
+      name: dto.name,
+      shortTerm: dto.shortTerm ?? false,
+      unitNumber: dto.unitNo ?? null,
+      bathrooms: dto.bathrooms ?? 0,
+      size: dto.sizeSqm ?? 0,
+      maidRoom: dto.maidRoom ?? false,
+      balcony: dto.balcony ?? '',
+      view: dto.view ?? null,
+      range: dto.price ?? 0,
+      commission: dto.commissionPct ?? 0,
+      status: resolvedStatus,
+      expirationDate: dto.expiryDate
+        ? typeof dto.expiryDate === 'string'
+          ? new Date(dto.expiryDate)
+          : dto.expiryDate instanceof Date
+            ? dto.expiryDate
+            : new Date(String(dto.expiryDate))
+        : null,
+      access: dto.access ?? null,
+      hasUtilities: dto.utilitiesIncluded ?? false,
+      hasFacilities: dto.facilitiesEnabled ?? false,
+      details: dto.propertyDetails ?? '',
+      directions: dto.propertyNotes ?? '',
+      images: dto.imageUrls ?? [],
+      document: dto.documents?.[0] ?? null,
+    };
+
+    if (categoryId !== undefined) createData.categoryId = categoryId;
+    if (typeId !== undefined) createData.typeId = typeId;
+    if (layoutId !== undefined) createData.layoutId = layoutId;
+    if (locationId !== undefined) createData.locationId = locationId;
+    if (furnishingId !== undefined) createData.furnishingId = furnishingId;
+    if (userId !== undefined) createData.userId = userId;
+    if (landlordId !== undefined) createData.landlordId = landlordId;
+
     const property = await this.prisma.property.create({
-      data: {
-        referenceNumber,
-        name: dto.name,
-        shortTerm: dto.shortTerm ?? false,
-        unitNumber: dto.unitNo ?? null,
-        bathrooms: dto.bathrooms ?? 0,
-        size: dto.sizeSqm ?? 0,
-        maidRoom: dto.maidRoom ?? false,
-        balcony: dto.balcony ?? '',
-        view: dto.view ?? null,
-        range: dto.price ?? 0,
-        commission: dto.commissionPct ?? 0,
-        status: resolvedStatus,
-        expirationDate: dto.expiryDate
-          ? typeof dto.expiryDate === 'string'
-            ? new Date(dto.expiryDate)
-            : dto.expiryDate instanceof Date
-              ? dto.expiryDate
-              : new Date(String(dto.expiryDate))
-          : null,
-        access: dto.access ?? null,
-        hasUtilities: dto.utilitiesIncluded ?? false,
-        hasFacilities: dto.facilitiesEnabled ?? false,
-        details: dto.propertyDetails ?? '',
-        directions: dto.propertyNotes ?? '',
-        images: dto.imageUrls ?? [],
-        document: dto.documents?.[0] ?? null,
-        categoryId: categoryId,
-        typeId: typeId,
-        layoutId: layoutId,
-        locationId: locationId,
-        furnishingId: furnishingId,
-        userId: userId,
-        landlordId: landlordId,
-      } as any,
+      data: createData,
     });
 
     const now = new Date().toLocaleString('en-GB', {

@@ -14,8 +14,25 @@ model Notification {
   id        Int              @id @default(autoincrement())
   type      NotificationType
   message   String
-  isRead    Boolean          @default(false)
   createdAt DateTime         @default(now())
 
+  recipients NotificationRecipient[]
+
   @@map("notifications")
+}
+
+model NotificationRecipient {
+  id             Int      @id @default(autoincrement())
+  userId         Int
+  notificationId Int
+  isRead         Boolean  @default(false)
+  readAt         DateTime?
+  createdAt      DateTime @default(now())
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  notification Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, notificationId])
+  @@index([userId, isRead])
+  @@map("notification_recipients")
 }

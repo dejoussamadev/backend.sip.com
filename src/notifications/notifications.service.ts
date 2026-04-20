@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationType, Role } from '@prisma/client';
 import { NotificationFilter } from './dto/get-notifications.dto';
@@ -35,10 +35,6 @@ export class NotificationsService {
     private notificationsGateway: NotificationsGateway,
   ) {}
 
-  /**
-   * Single entry point for all notifications.
-   * Saves to DB, sends WebSocket to targeted users, and sends email.
-   */
   async notify(params: {
     type: NotificationType;
     message: string;
@@ -57,11 +53,6 @@ export class NotificationsService {
     const sendToAdmins = recipients.admins ?? true;
     const recipientUserIds = recipients.userIds ?? [];
 
-    const notification = await this.prisma.notification.create({
-      data: { type, message },
-    });
-    this.logger.log(`Notification: [${type}] ${message}`);
-
     const admins = sendToAdmins
       ? await this.prisma.user.findMany({
           where: { role: Role.ADMIN, isActive: true },
@@ -69,19 +60,33 @@ export class NotificationsService {
         })
       : [];
 
-    if (sendToAdmins) {
-      this.notificationsGateway.sendToAdmins(notification);
-    }
-
     const extraRecipients = recipientUserIds.length
       ? await this.prisma.user.findMany({
-          where: {
-            id: { in: recipientUserIds },
-            isActive: true,
-          },
+          where: { id: { in: recipientUserIds }, isActive: true },
           select: { id: true, email: true, role: true },
         })
       : [];
+
+    const adminIds = new Set(admins.map((a) => a.id));
+    const allRecipientIds = [
+      ...admins.map((a) => a.id),
+      ...extraRecipients.filter((u) => !adminIds.has(u.id)).map((u) => u.id),
+    ];
+
+    const notification = await this.prisma.notification.create({
+      data: {
+        type,
+        message,
+        recipients: {
+          create: allRecipientIds.map((userId) => ({ userId })),
+        },
+      },
+    });
+    this.logger.log(`Notification: [${type}] ${message}`);
+
+    if (sendToAdmins) {
+      this.notificationsGateway.sendToAdmins(notification);
+    }
 
     for (const user of extraRecipients) {
       if (!sendToAdmins || user.role !== Role.ADMIN) {
@@ -90,17 +95,11 @@ export class NotificationsService {
     }
 
     const emails = new Set<string>();
-
     for (const admin of admins) {
-      if (admin.email) {
-        emails.add(admin.email);
-      }
+      if (admin.email) emails.add(admin.email);
     }
-
     for (const user of extraRecipients) {
-      if (user.email) {
-        emails.add(user.email);
-      }
+      if (user.email) emails.add(user.email);
     }
 
     if (emailContext && emails.size > 0) {
@@ -114,46 +113,45 @@ export class NotificationsService {
     return notification;
   }
 
-  // --- Read operations (used by controller) ---
-
   async findAll(
+    userId: number,
     filter?: NotificationFilter,
     unreadOnly?: boolean,
     page = '1',
     limit = '20',
   ) {
     const pagination = normalizePagination(page, limit, 20);
-    const take = pagination.limit;
-    const skip = pagination.skip;
 
-    const where: any = {};
-
-    if (unreadOnly) {
-      where.isRead = false;
-    }
-
+    const where: any = { userId };
+    if (unreadOnly) where.isRead = false;
     if (filter && filter !== NotificationFilter.ALL) {
-      if (filter === NotificationFilter.PROPERTY) {
-        where.type = {
-          in: this.propertyNotificationTypes,
-        };
-      } else if (filter === NotificationFilter.AGENT) {
-        where.type = {
-          in: this.agentNotificationTypes,
-        };
-      }
+      where.notification = {
+        type: {
+          in:
+            filter === NotificationFilter.PROPERTY
+              ? this.propertyNotificationTypes
+              : this.agentNotificationTypes,
+        },
+      };
     }
 
-    const [data, total, unreadCount] = await Promise.all([
-      this.prisma.notification.findMany({
+    const [rows, total, unreadCount] = await Promise.all([
+      this.prisma.notificationRecipient.findMany({
         where,
-        orderBy: { createdAt: 'desc' },
-        skip,
-        take,
+        include: { notification: true },
+        orderBy: { notification: { createdAt: 'desc' } },
+        skip: pagination.skip,
+        take: pagination.limit,
       }),
-      this.prisma.notification.count({ where }),
-      this.prisma.notification.count({ where: { ...where, isRead: false } }),
+      this.prisma.notificationRecipient.count({ where }),
+      this.prisma.notificationRecipient.count({ where: { ...where, isRead: false } }),
     ]);
+
+    const data = rows.map(({ notification, isRead, readAt }) => ({
+      ...notification,
+      isRead,
+      readAt,
+    }));
 
     return {
       data,
@@ -161,85 +159,98 @@ export class NotificationsService {
         total,
         unreadCount,
         page: pagination.page,
-        limit: take,
-        totalPages: Math.ceil(total / take),
+        limit: pagination.limit,
+        totalPages: Math.ceil(total / pagination.limit),
       },
     };
   }
 
   async findPropertyNotifications(
+    userId: number,
     unreadOnly?: boolean,
     page = '1',
     limit = '20',
   ) {
-    return this.findAll(NotificationFilter.PROPERTY, unreadOnly, page, limit);
+    return this.findAll(userId, NotificationFilter.PROPERTY, unreadOnly, page, limit);
   }
 
-  async findAgentNotifications(unreadOnly?: boolean, page = '1', limit = '20') {
-    return this.findAll(NotificationFilter.AGENT, unreadOnly, page, limit);
+  async findAgentNotifications(
+    userId: number,
+    unreadOnly?: boolean,
+    page = '1',
+    limit = '20',
+  ) {
+    return this.findAll(userId, NotificationFilter.AGENT, unreadOnly, page, limit);
   }
 
-  async markAsRead(id: number) {
-    return this.prisma.notification.update({
-      where: { id },
-      data: { isRead: true },
+  async markAsRead(userId: number, notificationId: number) {
+    const recipient = await this.prisma.notificationRecipient.findUnique({
+      where: { userId_notificationId: { userId, notificationId } },
+    });
+    if (!recipient) throw new NotFoundException('Notification not found');
+
+    return this.prisma.notificationRecipient.update({
+      where: { userId_notificationId: { userId, notificationId } },
+      data: { isRead: true, readAt: new Date() },
+      include: { notification: true },
     });
   }
 
-  async markAllAsRead(filter?: NotificationFilter) {
-    const where: any = { isRead: false };
-
+  async markAllAsRead(userId: number, filter?: NotificationFilter) {
+    const where: any = { userId, isRead: false };
     if (filter && filter !== NotificationFilter.ALL) {
-      if (filter === NotificationFilter.PROPERTY) {
-        where.type = {
-          in: this.propertyNotificationTypes,
-        };
-      } else if (filter === NotificationFilter.AGENT) {
-        where.type = {
-          in: this.agentNotificationTypes,
-        };
-      }
+      where.notification = {
+        type: {
+          in:
+            filter === NotificationFilter.PROPERTY
+              ? this.propertyNotificationTypes
+              : this.agentNotificationTypes,
+        },
+      };
     }
 
-    const result = await this.prisma.notification.updateMany({
+    const result = await this.prisma.notificationRecipient.updateMany({
       where,
-      data: { isRead: true },
+      data: { isRead: true, readAt: new Date() },
     });
-
     return { marked: result.count };
   }
 
-  async countUnread() {
+  async countUnread(userId: number) {
     const [total, properties, agents] = await Promise.all([
-      this.prisma.notification.count({ where: { isRead: false } }),
-      this.prisma.notification.count({
+      this.prisma.notificationRecipient.count({ where: { userId, isRead: false } }),
+      this.prisma.notificationRecipient.count({
         where: {
+          userId,
           isRead: false,
-          type: {
-            in: this.propertyNotificationTypes,
-          },
+          notification: { type: { in: this.propertyNotificationTypes } },
         },
       }),
-      this.prisma.notification.count({
+      this.prisma.notificationRecipient.count({
         where: {
+          userId,
           isRead: false,
-          type: {
-            in: this.agentNotificationTypes,
-          },
+          notification: { type: { in: this.agentNotificationTypes } },
         },
       }),
     ]);
-
     return { total, properties, agents };
   }
 
-  async remove(id: number) {
-    return this.prisma.notification.delete({ where: { id } });
+  async remove(userId: number, notificationId: number) {
+    const recipient = await this.prisma.notificationRecipient.findUnique({
+      where: { userId_notificationId: { userId, notificationId } },
+    });
+    if (!recipient) throw new NotFoundException('Notification not found');
+
+    return this.prisma.notificationRecipient.delete({
+      where: { userId_notificationId: { userId, notificationId } },
+    });
   }
 
-  async clearRead() {
-    const result = await this.prisma.notification.deleteMany({
-      where: { isRead: true },
+  async clearRead(userId: number) {
+    const result = await this.prisma.notificationRecipient.deleteMany({
+      where: { userId, isRead: true },
     });
     return { deleted: result.count };
   }
