@@ -7,6 +7,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateAgentDto } from './dto/create-agent.dto';
 import { UpdateAgentDto } from './dto/update-agent.dto';
+import { UpdateMyProfileDto } from './dto/update-my-profile.dto';
 import { NotificationType, Prisma, Role } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { normalizePagination } from '../common/utils/pagination.util';
@@ -192,6 +193,26 @@ export class UsersService {
 
   async findMyProfile(id: number) {
     return this.findOne(id);
+  }
+
+  async updateMyProfile(id: number, dto: UpdateMyProfileDto) {
+    await this.findAgentByIdOrThrow(id);
+
+    if (dto.email) {
+      const emailExists = await this.prisma.user.findFirst({
+        where: { email: dto.email.toLowerCase().trim(), NOT: { id } },
+      });
+      if (emailExists) {
+        throw new ConflictException('This email is already in use');
+      }
+      dto.email = dto.email.toLowerCase().trim();
+    }
+
+    return this.prisma.user.update({
+      where: { id },
+      data: dto,
+      select: this.defaultSelect,
+    });
   }
 
   async findSimpleList() {
