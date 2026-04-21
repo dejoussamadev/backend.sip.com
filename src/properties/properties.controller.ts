@@ -136,6 +136,12 @@ export class PropertiesController {
     });
   }
 
+  @Get('check-ref-id')
+  @Roles(Role.ADMIN, Role.AGENT)
+  checkRefId(@Query('ref') ref: string) {
+    return this.propertiesService.checkReferenceNumber(ref);
+  }
+
   @Get(':id')
   @Roles(Role.ADMIN, Role.AGENT)
   findOne(@Param('id', ParseIntPipe) id: number) {

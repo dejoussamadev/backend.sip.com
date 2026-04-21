@@ -28,6 +28,26 @@ export class PropertiesService {
     private notificationsService: NotificationsService,
   ) {}
 
+  async checkReferenceNumber(
+    ref: string,
+  ): Promise<{ available: boolean; suggestedNext?: string }> {
+    const trimmed = ref?.trim();
+    if (!trimmed) return { available: false };
+
+    const existing = await this.prisma.property.findUnique({
+      where: { referenceNumber: trimmed },
+      select: { id: true },
+    });
+    if (!existing) return { available: true };
+
+    const prefix = trimmed.replace(/\d+\/?$/, '');
+    const count = await this.prisma.property.count({
+      where: { referenceNumber: { startsWith: prefix } },
+    });
+    const suggestedNext = `${prefix}${100 + count + 1}/`;
+    return { available: false, suggestedNext };
+  }
+
   private validateDependencies(
     category: PropertyCategory,
     type: PropertyType,
