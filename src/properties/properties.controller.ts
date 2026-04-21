@@ -138,8 +138,11 @@ export class PropertiesController {
 
   @Get('check-ref-id')
   @Roles(Role.ADMIN, Role.AGENT)
-  checkRefId(@Query('ref') ref: string) {
-    return this.propertiesService.checkReferenceNumber(ref);
+  checkRefId(
+    @Query('categoryId', ParseIntPipe) categoryId: number,
+    @Query('typeId', ParseIntPipe) typeId: number,
+  ) {
+    return this.propertiesService.getNextReferenceNumber(categoryId, typeId);
   }
 
   @Get(':id')
