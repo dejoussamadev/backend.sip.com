@@ -15,6 +15,7 @@ import {
 import { UsersService } from './users.service';
 import { CreateAgentDto } from './dto/create-agent.dto';
 import { UpdateAgentDto } from './dto/update-agent.dto';
+import { UpdateMyProfileDto } from './dto/update-my-profile.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -60,6 +61,15 @@ export class UsersController {
   @Roles(Role.AGENT, Role.ADMIN)
   getMyProfile(@CurrentUser() user: any) {
     return this.usersService.findMyProfile(user.id);
+  }
+
+  @Patch('profile/me')
+  @Roles(Role.AGENT, Role.ADMIN)
+  updateMyProfile(
+    @CurrentUser() user: any,
+    @Body() updateMyProfileDto: UpdateMyProfileDto,
+  ) {
+    return this.usersService.updateMyProfile(user.id, updateMyProfileDto);
   }
 
   @Get('list/simple')
