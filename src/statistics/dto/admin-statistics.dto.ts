@@ -19,6 +19,18 @@ export class TopAgentDto {
   propertiesCount: number;
 }
 
+export class TopTypeDto {
+  id: number;
+  name: string;
+  propertiesCount: number;
+}
+
+export class TopLocationDto {
+  id: number;
+  name: string;
+  propertiesCount: number;
+}
+
 export class CategoryCountDto {
   categoryId: number;
   categoryName: string;
@@ -29,6 +41,8 @@ export class AdminStatisticsDto {
   statusPercentages: StatusPercentageDto[];
   topLandlords: TopLandlordDto[];
   topAgents: TopAgentDto[];
+  topTypes: TopTypeDto[];
+  topLocations: TopLocationDto[];
   pendingCount: number;
   expiringCount: number;
   propertiesByCategory: CategoryCountDto[];

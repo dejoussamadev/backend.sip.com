@@ -160,16 +160,24 @@ export class UsersService {
     const currentPage = pagination.page;
     const skip = pagination.skip;
 
-    const [data, total] = await Promise.all([
+    const [rawData, total] = await Promise.all([
       this.prisma.user.findMany({
         where,
-        select: this.defaultSelect,
+        select: {
+          ...this.defaultSelect,
+          _count: { select: { properties: true } },
+        },
         orderBy: [{ createdAt: 'desc' }],
         skip,
         take,
       }),
       this.prisma.user.count({ where }),
     ]);
+
+    const data = rawData.map(({ _count, ...user }) => ({
+      ...user,
+      propertiesCount: _count.properties,
+    }));
 
     return {
       data,
