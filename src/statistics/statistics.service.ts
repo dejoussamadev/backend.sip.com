@@ -91,6 +91,8 @@ export class StatisticsService {
       statusBreakdown,
       topLandlords,
       topAgents,
+      topTypes,
+      topLocations,
       pendingCount,
       expiringCount,
       categoryBreakdown,
@@ -116,6 +118,26 @@ export class StatisticsService {
           id: true,
           name: true,
           agentCode: true,
+          _count: { select: { properties: true } },
+        },
+        orderBy: { properties: { _count: 'desc' } },
+        take: 5,
+      }),
+
+      this.prisma.type.findMany({
+        select: {
+          id: true,
+          name: true,
+          _count: { select: { properties: true } },
+        },
+        orderBy: { properties: { _count: 'desc' } },
+        take: 5,
+      }),
+
+      this.prisma.location.findMany({
+        select: {
+          id: true,
+          name: true,
           _count: { select: { properties: true } },
         },
         orderBy: { properties: { _count: 'desc' } },
@@ -177,6 +199,14 @@ export class StatisticsService {
         propertiesCount: _count.properties,
       })),
       topAgents: topAgents.map(({ _count, ...rest }) => ({
+        ...rest,
+        propertiesCount: _count.properties,
+      })),
+      topTypes: topTypes.map(({ _count, ...rest }) => ({
+        ...rest,
+        propertiesCount: _count.properties,
+      })),
+      topLocations: topLocations.map(({ _count, ...rest }) => ({
         ...rest,
         propertiesCount: _count.properties,
       })),

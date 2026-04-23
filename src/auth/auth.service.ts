@@ -192,15 +192,22 @@ export class AuthService {
   private resolveIpAddress(request: Request): string | null {
     const forwardedFor = request.headers['x-forwarded-for'];
 
+    let raw: string | null = null;
+
     if (typeof forwardedFor === 'string') {
-      return forwardedFor.split(',')[0]?.trim() ?? null;
+      raw = forwardedFor.split(',')[0]?.trim() ?? null;
+    } else if (Array.isArray(forwardedFor)) {
+      raw = forwardedFor[0] ?? null;
+    } else {
+      raw = request.ip ?? null;
     }
 
-    if (Array.isArray(forwardedFor)) {
-      return forwardedFor[0] ?? null;
+    // Strip IPv4-mapped IPv6 prefix (::ffff:x.x.x.x → x.x.x.x)
+    if (raw && raw.startsWith('::ffff:')) {
+      raw = raw.slice(7);
     }
 
-    return request.ip ?? null;
+    return raw;
   }
 
   private resolveUserAgent(request: Request): string | null {
