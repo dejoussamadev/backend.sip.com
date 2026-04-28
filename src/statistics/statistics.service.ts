@@ -84,8 +84,8 @@ export class StatisticsService {
 
   async getAdminStatistics(): Promise<AdminStatisticsDto> {
     const now = new Date();
-    const thirtyDaysFromNow = new Date();
-    thirtyDaysFromNow.setDate(now.getDate() + 30);
+    const fourteenDaysFromNow = new Date();
+    fourteenDaysFromNow.setDate(now.getDate() + 14);
 
     const [
       statusBreakdown,
@@ -153,7 +153,7 @@ export class StatisticsService {
           status: { not: PropertyStatus.ARCHIVED },
           expirationDate: {
             gte: now,
-            lte: thirtyDaysFromNow,
+            lte: fourteenDaysFromNow,
           },
         },
       }),
