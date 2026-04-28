@@ -239,7 +239,10 @@ export class PropertiesService {
     return property;
   }
 
-  async findAll(filters: any = {}) {
+  async findAll(
+    filters: any = {},
+    currentUser?: { id: number; role: Role },
+  ) {
     const {
       keyword,
       status,
@@ -266,6 +269,8 @@ export class PropertiesService {
       balcony,
       view,
       facilityId,
+      expiringSoon,
+      mine,
       page = '1',
       limit = '10',
       skip,
@@ -283,6 +288,14 @@ export class PropertiesService {
         : pagination.skip;
     const resolvedTake = pagination.limit;
 
+    const isExpiringSoon = parseBool(expiringSoon) === true;
+    const isMine = parseBool(mine) === true;
+    const fourteenDaysFromNow = isExpiringSoon
+      ? new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)
+      : null;
+    const enforcedAgentId =
+      isMine && currentUser?.role === Role.AGENT ? currentUser.id : undefined;
+
     const where: Prisma.PropertyWhereInput = {
       OR: keyword
         ? [
@@ -292,7 +305,11 @@ export class PropertiesService {
             { directions: { contains: keyword, mode: 'insensitive' } },
           ]
         : undefined,
-      status: status || undefined,
+      status: status
+        ? status
+        : isExpiringSoon
+          ? ({ not: PropertyStatus.ARCHIVED } as any)
+          : undefined,
       categoryId: categoryId ? Number(categoryId) : undefined,
       typeId: typeId ? Number(typeId) : undefined,
       layoutId: layoutId ? Number(layoutId) : undefined,
@@ -328,8 +345,16 @@ export class PropertiesService {
             },
           }
         : undefined,
-      userId: agentId ? Number(agentId) : undefined,
+      userId:
+        enforcedAgentId !== undefined
+          ? enforcedAgentId
+          : agentId
+            ? Number(agentId)
+            : undefined,
       landlordId: landlordId ? Number(landlordId) : undefined,
+      expirationDate: isExpiringSoon
+        ? { gte: new Date(), lte: fourteenDaysFromNow! }
+        : undefined,
       range: {
         gte: minPrice
           ? Number(minPrice)
