@@ -68,39 +68,17 @@ export class PropertiesService {
       dto.furnishing = undefined;
     }
 
-    // Utilities : si non inclus, tout à false
-    if (!dto.utilitiesIncluded) {
-      dto.utilitiesWaterElec = false;
-      dto.utilitiesInternet = false;
-      dto.utilitiesServiceCharge = false;
-      dto.utilitiesSewage = false;
-      dto.utilitiesDistrictCooling = false;
+    if (dto.utilitiesIncluded === false) {
+      dto.utilityIds = [];
     }
+    if (dto.facilitiesEnabled === false) {
+      dto.facilityIds = [];
+    }
+  }
 
-    // Facilities : si désactivées, tout à false
-    if (!dto.facilitiesEnabled) {
-      dto.facSharedPool = false;
-      dto.facClubHouse = false;
-      dto.facSauna = false;
-      dto.facCinema = false;
-      dto.facSquash = false;
-      dto.facMultiPurposeHall = false;
-      dto.facCateringService = false;
-      dto.facPrivatePool = false;
-      dto.facKidsPlay = false;
-      dto.facSteamRoom = false;
-      dto.facPadelCourt = false;
-      dto.facBasketBall = false;
-      dto.facTennis = false;
-      dto.facMosque = false;
-      dto.facLaundryService = false;
-      dto.facGym = false;
-      dto.facJacuzzi = false;
-      dto.facBBQ = false;
-      dto.facFootball = false;
-      dto.facCoWorking = false;
-      dto.facCleaningService = false;
-    }
+  private dedupeIds(ids?: number[]): number[] {
+    if (!ids?.length) return [];
+    return Array.from(new Set(ids.filter((n) => Number.isFinite(n))));
   }
 
   private toPropertyStatus(
@@ -207,8 +185,33 @@ export class PropertiesService {
     if (userId !== undefined) createData.userId = userId;
     if (landlordId !== undefined) createData.landlordId = landlordId;
 
-    const property = await this.prisma.property.create({
-      data: createData,
+    const facilityIds = this.dedupeIds(dto.facilityIds);
+    const utilityIds = this.dedupeIds(dto.utilityIds);
+
+    const property = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.property.create({ data: createData });
+
+      if (dto.facilitiesEnabled && facilityIds.length) {
+        await tx.propertyFacility.createMany({
+          data: facilityIds.map((facilityId) => ({
+            propertyId: created.id,
+            facilityId,
+          })),
+          skipDuplicates: true,
+        });
+      }
+
+      if (dto.utilitiesIncluded && utilityIds.length) {
+        await tx.propertyUtility.createMany({
+          data: utilityIds.map((utilityId) => ({
+            propertyId: created.id,
+            utilityId,
+          })),
+          skipDuplicates: true,
+        });
+      }
+
+      return created;
     });
 
     const now = new Date().toLocaleString('en-GB', {
@@ -518,9 +521,44 @@ export class PropertiesService {
     if (dto.status !== undefined)
       updateData.status = this.ensureValidStatus(dto.status);
 
-    const updated = await this.prisma.property.update({
-      where: { id },
-      data: updateData,
+    const facilityIds =
+      dto.facilityIds !== undefined ? this.dedupeIds(dto.facilityIds) : undefined;
+    const utilityIds =
+      dto.utilityIds !== undefined ? this.dedupeIds(dto.utilityIds) : undefined;
+
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const result = await tx.property.update({
+        where: { id },
+        data: updateData,
+      });
+
+      if (facilityIds !== undefined) {
+        await tx.propertyFacility.deleteMany({ where: { propertyId: id } });
+        if (facilityIds.length) {
+          await tx.propertyFacility.createMany({
+            data: facilityIds.map((facilityId) => ({
+              propertyId: id,
+              facilityId,
+            })),
+            skipDuplicates: true,
+          });
+        }
+      }
+
+      if (utilityIds !== undefined) {
+        await tx.propertyUtility.deleteMany({ where: { propertyId: id } });
+        if (utilityIds.length) {
+          await tx.propertyUtility.createMany({
+            data: utilityIds.map((utilityId) => ({
+              propertyId: id,
+              utilityId,
+            })),
+            skipDuplicates: true,
+          });
+        }
+      }
+
+      return result;
     });
 
     const now = new Date().toLocaleString('en-GB', {
@@ -614,9 +652,38 @@ export class PropertiesService {
       landlordId,
     };
 
-    const updated = await this.prisma.property.update({
-      where: { id },
-      data: updateData,
+    const facilityIds = this.dedupeIds(dto.facilityIds);
+    const utilityIds = this.dedupeIds(dto.utilityIds);
+
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const result = await tx.property.update({
+        where: { id },
+        data: updateData,
+      });
+
+      await tx.propertyFacility.deleteMany({ where: { propertyId: id } });
+      if (dto.facilitiesEnabled && facilityIds.length) {
+        await tx.propertyFacility.createMany({
+          data: facilityIds.map((facilityId) => ({
+            propertyId: id,
+            facilityId,
+          })),
+          skipDuplicates: true,
+        });
+      }
+
+      await tx.propertyUtility.deleteMany({ where: { propertyId: id } });
+      if (dto.utilitiesIncluded && utilityIds.length) {
+        await tx.propertyUtility.createMany({
+          data: utilityIds.map((utilityId) => ({
+            propertyId: id,
+            utilityId,
+          })),
+          skipDuplicates: true,
+        });
+      }
+
+      return result;
     });
 
     const now = new Date().toLocaleString('en-GB', {
