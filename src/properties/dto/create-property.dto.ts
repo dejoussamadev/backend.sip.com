@@ -10,6 +10,7 @@ import {
   Max,
   MinDate,
 } from 'class-validator';
+import { Transform } from 'class-transformer';
 import {
   PropertyCategory,
   PropertyType,
@@ -18,6 +19,14 @@ import {
   FurnishingOption,
 } from '../constants/property.enums';
 import { PropertyAccess, PropertyStatus, PropertyView } from '@prisma/client';
+
+const toIntArray = (value: unknown): number[] | undefined => {
+  if (value === undefined || value === null || value === '') return undefined;
+  const arr = Array.isArray(value) ? value : [value];
+  return arr
+    .map((v) => (typeof v === 'number' ? v : Number(v)))
+    .filter((n) => Number.isFinite(n));
+};
 
 export class CreatePropertyDto {
   @IsOptional() @IsString() refNo?: string; // généré si absent
@@ -47,34 +56,19 @@ export class CreatePropertyDto {
 
   @IsOptional() @IsEnum(PropertyAccess) access?: PropertyAccess;
   @IsOptional() @IsBoolean() utilitiesIncluded?: boolean;
-  @IsOptional() @IsBoolean() utilitiesWaterElec?: boolean;
-  @IsOptional() @IsBoolean() utilitiesInternet?: boolean;
-  @IsOptional() @IsBoolean() utilitiesServiceCharge?: boolean;
-  @IsOptional() @IsBoolean() utilitiesSewage?: boolean;
-  @IsOptional() @IsBoolean() utilitiesDistrictCooling?: boolean;
-
   @IsOptional() @IsBoolean() facilitiesEnabled?: boolean;
-  @IsOptional() @IsBoolean() facSharedPool?: boolean;
-  @IsOptional() @IsBoolean() facClubHouse?: boolean;
-  @IsOptional() @IsBoolean() facSauna?: boolean;
-  @IsOptional() @IsBoolean() facCinema?: boolean;
-  @IsOptional() @IsBoolean() facSquash?: boolean;
-  @IsOptional() @IsBoolean() facMultiPurposeHall?: boolean;
-  @IsOptional() @IsBoolean() facCateringService?: boolean;
-  @IsOptional() @IsBoolean() facPrivatePool?: boolean;
-  @IsOptional() @IsBoolean() facKidsPlay?: boolean;
-  @IsOptional() @IsBoolean() facSteamRoom?: boolean;
-  @IsOptional() @IsBoolean() facPadelCourt?: boolean;
-  @IsOptional() @IsBoolean() facBasketBall?: boolean;
-  @IsOptional() @IsBoolean() facTennis?: boolean;
-  @IsOptional() @IsBoolean() facMosque?: boolean;
-  @IsOptional() @IsBoolean() facLaundryService?: boolean;
-  @IsOptional() @IsBoolean() facGym?: boolean;
-  @IsOptional() @IsBoolean() facJacuzzi?: boolean;
-  @IsOptional() @IsBoolean() facBBQ?: boolean;
-  @IsOptional() @IsBoolean() facFootball?: boolean;
-  @IsOptional() @IsBoolean() facCoWorking?: boolean;
-  @IsOptional() @IsBoolean() facCleaningService?: boolean;
+
+  @IsOptional()
+  @Transform(({ value }) => toIntArray(value))
+  @IsArray()
+  @IsInt({ each: true })
+  facilityIds?: number[];
+
+  @IsOptional()
+  @Transform(({ value }) => toIntArray(value))
+  @IsArray()
+  @IsInt({ each: true })
+  utilityIds?: number[];
 
   @IsOptional() @IsString() propertyDetails?: string;
   @IsOptional() @IsString() propertyNotes?: string;
