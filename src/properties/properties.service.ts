@@ -503,7 +503,18 @@ export class PropertiesService {
       updateData.details = dto.propertyDetails;
     if (dto.propertyNotes !== undefined)
       updateData.directions = dto.propertyNotes;
-    if (dto.imageUrls !== undefined) updateData.images = dto.imageUrls;
+    if (dto.imageUrls !== undefined || dto.keptUrls !== undefined) {
+      const currentImages = Array.isArray((current as any).images)
+        ? (current as any).images
+        : [];
+      const keptUrls = dto.keptUrls !== undefined ? dto.keptUrls : currentImages;
+      updateData.images = Array.from(new Set([...(keptUrls ?? []), ...(dto.imageUrls ?? [])]));
+    }
+    if (dto.documents?.length) {
+      updateData.document = dto.documents[0];
+    } else if (dto.removeDocument === true) {
+      updateData.document = null;
+    }
     if (dto.expiryDate !== undefined)
       updateData.expirationDate =
         typeof dto.expiryDate === 'string'
