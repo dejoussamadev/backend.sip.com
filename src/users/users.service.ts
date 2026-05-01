@@ -119,6 +119,7 @@ export class UsersService {
     await this.notificationsService.notify({
       type: NotificationType.AGENT_CREATED,
       message: `A new agent ${agent.name} (${agent.agentCode}) has been added.`,
+      entityId: agent.id,
       emailContext: { agentName: agent.name, agentCode: agent.agentCode },
     });
 
@@ -271,6 +272,7 @@ export class UsersService {
     await this.notificationsService.notify({
       type: NotificationType.AGENT_UPDATED,
       message: `Agent ${updatedAgent.name} (${updatedAgent.agentCode}) has been updated.`,
+      entityId: updatedAgent.id,
       emailContext: {
         agentName: updatedAgent.name,
         agentCode: updatedAgent.agentCode,

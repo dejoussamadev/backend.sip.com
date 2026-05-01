@@ -1,0 +1,44 @@
+# Property — field-level validation
+PROPERTY_NAME_REQUIRED: "Property name is required."
+PROPERTY_PRICE_REQUIRED: "Price is required and must be a valid number."
+PROPERTY_COMMISSION_RANGE: "Commission must be between 0% and 100%."
+PROPERTY_EXPIRY_PAST: "Expiry date can't be in the past."
+PROPERTY_BATHROOMS_INT: "Number of bathrooms must be a whole number."
+PROPERTY_SIZE_NUMBER: "Size must be a valid number."
+PROPERTY_LATITUDE_NUMBER: "Latitude must be a valid number."
+PROPERTY_LONGITUDE_NUMBER: "Longitude must be a valid number."
+
+PROPERTY_CATEGORY_INVALID: "Please select a valid property category."
+PROPERTY_TYPE_INVALID: "Please select a valid property type."
+PROPERTY_LAYOUT_INVALID: "Please select a valid property layout."
+PROPERTY_BALCONY_INVALID: "Please select a valid balcony option."
+PROPERTY_VIEW_INVALID: "Please select a valid view."
+PROPERTY_FURNISHING_INVALID: "Please select a valid furnishing option."
+PROPERTY_STATUS_INVALID: "The selected property status is invalid."
+PROPERTY_ACCESS_INVALID: "Please select a valid access option."
+
+PROPERTY_SHORT_TERM_BOOL: "Short-term flag must be yes or no."
+PROPERTY_MAID_ROOM_BOOL: "Maid-room flag must be yes or no."
+PROPERTY_UTILITIES_INCLUDED_BOOL: '"Utilities included" must be yes or no.'
+PROPERTY_FACILITIES_ENABLED_BOOL: '"Facilities enabled" must be yes or no.'
+
+PROPERTY_FACILITY_IDS_INVALID: "Invalid facility selection."
+PROPERTY_UTILITY_IDS_INVALID: "Invalid utility selection."
+PROPERTY_IMAGES_INVALID: "Invalid property images."
+PROPERTY_DOCUMENTS_INVALID: "Invalid property documents."
+
+PROPERTY_REF_NO_STRING: "Reference number must be text."
+PROPERTY_UNIT_NO_STRING: "Unit number must be text."
+PROPERTY_CURRENCY_STRING: "Currency must be text."
+PROPERTY_DETAILS_STRING: "Property details must be text."
+PROPERTY_NOTES_STRING: "Property notes must be text."
+PROPERTY_LOCATION_CODE_STRING: "Location code must be text."
+PROPERTY_ADDRESS_STRING: "Address must be text."
+
+# Property — service-level
+PROPERTY_TYPE_INVALID_FOR_CATEGORY: "The selected property type isn't valid for the chosen category. Please choose a different type."
+PROPERTY_LAYOUT_INVALID_FOR_TYPE: "The selected layout isn't valid for the chosen property type. Please choose a different layout."
+
+# Generic fallbacks
+GENERIC_VALIDATION_FAILED: "Some fields are invalid. Please review the form and try again."
+GENERIC_BAD_REQUEST: "The request couldn't be processed. Please try again."

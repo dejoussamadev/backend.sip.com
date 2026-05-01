@@ -1,6 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { ValidationPipe, Logger } from '@nestjs/common';
+import { Logger } from '@nestjs/common';
 import cookieParser from 'cookie-parser';
 
 async function bootstrap() {
@@ -15,18 +15,6 @@ async function bootstrap() {
 
   // ✅ Cookie parser for httpOnly JWT cookies
   app.use(cookieParser());
-
-  // ✅ Validation globale des DTOs
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true, // Supprime les propriétés non définies dans le DTO
-      forbidNonWhitelisted: true, // Rejette les requêtes avec des propriétés inconnues
-      transform: true, // Transforme automatiquement les types
-      transformOptions: {
-        enableImplicitConversion: true,
-      },
-    }),
-  );
 
   // ✅ CORS pour le frontend Angular
   const corsOrigins = process.env.CORS_ORIGINS
