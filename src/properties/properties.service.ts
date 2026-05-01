@@ -1,6 +1,5 @@
 import {
   Injectable,
-  BadRequestException,
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
@@ -20,12 +19,15 @@ import { Prisma, NotificationType, PropertyStatus, Role } from '@prisma/client';
 import { NotificationsService } from '../notifications/notifications.service';
 import { normalizePagination } from '../common/utils/pagination.util';
 import { parseBool } from '../common/utils/parse-bool.util';
+import { AppValidationException } from '../common/errors/app-validation.exception';
+import { ErrorCatalogService } from '../common/errors/error-catalog.service';
 
 @Injectable()
 export class PropertiesService {
   constructor(
     private prisma: PrismaService,
     private notificationsService: NotificationsService,
+    private catalog: ErrorCatalogService,
   ) {}
 
   async getNextReferenceNumber(
@@ -43,16 +45,16 @@ export class PropertiesService {
   ) {
     const allowedTypes = CATEGORY_TO_TYPES[category];
     if (allowedTypes && !allowedTypes.includes(type)) {
-      throw new BadRequestException(
-        `Type ${type} not allowed for category ${category}`,
-      );
+      throw AppValidationException.from(this.catalog, [
+        { field: 'type', code: 'PROPERTY_TYPE_INVALID_FOR_CATEGORY' },
+      ]);
     }
     if (layout) {
       const allowedLayouts = TYPE_TO_LAYOUTS[type];
       if (allowedLayouts && !allowedLayouts.includes(layout as any)) {
-        throw new BadRequestException(
-          `Layout ${layout} not allowed for type ${type}`,
-        );
+        throw AppValidationException.from(this.catalog, [
+          { field: 'layout', code: 'PROPERTY_LAYOUT_INVALID_FOR_TYPE' },
+        ]);
       }
     }
   }
@@ -108,7 +110,9 @@ export class PropertiesService {
   ): PropertyStatus {
     const mapped = this.toPropertyStatus(status);
     if (!mapped) {
-      throw new BadRequestException('Invalid status');
+      throw AppValidationException.from(this.catalog, [
+        { field: 'status', code: 'PROPERTY_STATUS_INVALID' },
+      ]);
     }
     return mapped;
   }
@@ -226,6 +230,7 @@ export class PropertiesService {
     await this.notificationsService.notify({
       type: NotificationType.PROPERTY_CREATED,
       message: `A new property with reference id ${property.referenceNumber} has been added by ${agentName} on ${now}.`,
+      entityId: property.id,
       emailContext: {
         referenceNumber: property.referenceNumber,
         propertyName: property.name,
@@ -584,6 +589,7 @@ export class PropertiesService {
     await this.notificationsService.notify({
       type: NotificationType.PROPERTY_UPDATED,
       message: `Property with reference id ${updated.referenceNumber} has been updated by ${agentName} on ${now}.`,
+      entityId: updated.id,
       emailContext: {
         referenceNumber: updated.referenceNumber,
         propertyName: (updated as any).name,
@@ -709,6 +715,7 @@ export class PropertiesService {
     await this.notificationsService.notify({
       type: NotificationType.PROPERTY_UPDATED,
       message: `Property with reference id ${updated.referenceNumber} has been updated by ${agentName} on ${now}.`,
+      entityId: updated.id,
       emailContext: {
         referenceNumber: updated.referenceNumber,
         propertyName: (updated as any).name,

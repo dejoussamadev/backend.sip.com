@@ -38,6 +38,7 @@ export class NotificationsService {
   async notify(params: {
     type: NotificationType;
     message: string;
+    entityId?: number;
     emailContext?: EmailContext;
     recipients?: {
       admins?: boolean;
@@ -47,6 +48,7 @@ export class NotificationsService {
     const {
       type,
       message,
+      entityId,
       emailContext,
       recipients = { admins: true, userIds: [] },
     } = params;
@@ -77,6 +79,7 @@ export class NotificationsService {
       data: {
         type,
         message,
+        entityId,
         recipients: {
           create: allRecipientIds.map((userId) => ({ userId })),
         },
