@@ -105,7 +105,13 @@ export class UsersController {
   // Delete a user by id as an admin.
   @Delete(':id')
   @Roles(Role.ADMIN)
-  remove(@Param('id', ParseIntPipe) id: number) {
-    return this.usersService.remove(id);
+  remove(
+    @Param('id', ParseIntPipe) id: number,
+    @Query('reassignToAgentId') reassignToAgentId?: string,
+  ) {
+    return this.usersService.remove(
+      id,
+      reassignToAgentId ? parseInt(reassignToAgentId, 10) : undefined,
+    );
   }
 }

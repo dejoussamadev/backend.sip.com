@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Injectable,
   NotFoundException,
   ConflictException,
@@ -301,11 +302,27 @@ export class UsersService {
     };
   }
 
-  async remove(id: number) {
+  async remove(id: number, reassignToAgentId?: number) {
     const existingAgent = await this.findAgentByIdOrThrow(id);
 
-    await this.prisma.user.delete({
-      where: { id },
+    const propertiesCount = await this.prisma.property.count({
+      where: { userId: id },
+    });
+
+    if (propertiesCount > 0 && !reassignToAgentId) {
+      throw new BadRequestException(
+        `Cannot delete user: they have ${propertiesCount} assigned ${propertiesCount === 1 ? 'property' : 'properties'}. Reassign them to another agent first.`,
+      );
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      if (propertiesCount > 0 && reassignToAgentId) {
+        await tx.property.updateMany({
+          where: { userId: id },
+          data: { userId: reassignToAgentId },
+        });
+      }
+      await tx.user.delete({ where: { id } });
     });
 
     this.logger.log(`User deleted: ${existingAgent.email}`);
