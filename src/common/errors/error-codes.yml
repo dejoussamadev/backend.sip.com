@@ -42,3 +42,13 @@ PROPERTY_LAYOUT_INVALID_FOR_TYPE: "The selected layout isn't valid for the chose
 # Generic fallbacks
 GENERIC_VALIDATION_FAILED: "Some fields are invalid. Please review the form and try again."
 GENERIC_BAD_REQUEST: "The request couldn't be processed. Please try again."
+
+# Reservation — validation
+RESERVATION_LINK_INVALID: "The reservation link is invalid."
+RESERVATION_LINK_EXPIRED: "The reservation link has expired."
+RESERVATION_LINK_USED: "This reservation link has already been used."
+RESERVATION_ID_NUMBER_INVALID: "ID number must be exactly 11 digits."
+RESERVATION_PASSPORT_INVALID: "Passport number must be 6–12 alphanumeric characters."
+RESERVATION_PAID_BOOKING_FEE_OUT_OF_RANGE: "Paid booking fee must be greater than 0 and less than the property price."
+RESERVATION_MOVE_IN_DATE_PAST: "Move-in date must be today or later."
+RESERVATION_NOT_PENDING: "Only pending reservations can be approved or rejected."

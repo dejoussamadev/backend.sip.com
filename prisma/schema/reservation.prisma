@@ -1,0 +1,118 @@
+enum ReservationIdType {
+  ID
+  PASSPORT
+}
+
+enum ContractPeriod {
+  FIVE_MONTHS_OR_BELOW
+  SIX_MONTHS
+  TWELVE_MONTHS
+  THIRTEEN_MONTHS
+  FOURTEEN_MONTHS
+  FIFTEEN_MONTHS
+  TWENTY_FOUR_MONTHS
+}
+
+enum PaymentModality {
+  PRORATED
+  NOT_PRORATED
+}
+
+enum BookingFeeModality {
+  FULL
+  PARTIAL
+}
+
+enum PaymentMethod {
+  CASH
+  BANK_TRANSFER
+  CHEQUE
+}
+
+enum SecurityDepositStatus {
+  PAID
+  UNPAID
+}
+
+enum ReservationStatus {
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+model Reservation {
+  id                     Int                   @id @default(autoincrement())
+  reservationDate        DateTime
+  firstName              String
+  lastName               String
+  nationality            String
+  idType                 ReservationIdType
+  idNumber               String
+  email                  String
+  phone                  String
+  countryCode            String
+
+  propertyId             Int
+  property               Property              @relation(fields: [propertyId], references: [id], onDelete: Restrict)
+
+  contractPeriod         ContractPeriod
+  paymentModality        PaymentModality
+  utilitiesIncluded      Boolean
+  moveInDate             DateTime
+  contractStartDate      DateTime
+
+  bookingFeeModality     BookingFeeModality
+  paidBookingFee         Decimal               @db.Decimal(15, 2)
+
+  paymentMethod          PaymentMethod
+  securityDeposit        SecurityDepositStatus
+  paymentProofUrl        String?
+
+  consultantId           Int
+  consultant             User                  @relation("ReservationConsultant", fields: [consultantId], references: [id], onDelete: Restrict)
+
+  clientSignatureUrl     String
+  consultantSignatureUrl String
+
+  termsAcceptedAt        DateTime
+
+  status                 ReservationStatus     @default(PENDING_APPROVAL)
+  rejectionReason        String?
+  approvedById           Int?
+  approvedBy             User?                 @relation("ReservationApprover", fields: [approvedById], references: [id])
+  approvedAt             DateTime?
+
+  createdById            Int
+  createdBy              User                  @relation("ReservationCreator", fields: [createdById], references: [id], onDelete: Restrict)
+
+  linkId                 Int?                  @unique
+  link                   ReservationLink?      @relation(fields: [linkId], references: [id])
+
+  createdAt              DateTime              @default(now())
+  updatedAt              DateTime              @updatedAt
+
+  @@index([propertyId])
+  @@index([createdById])
+  @@index([consultantId])
+  @@index([contractPeriod])
+  @@index([status])
+  @@map("reservations")
+}
+
+model ReservationLink {
+  id                     Int          @id @default(autoincrement())
+  code                   String       @unique @db.VarChar(16)
+  propertyId             Int
+  property               Property     @relation(fields: [propertyId], references: [id], onDelete: Restrict)
+  generatedById          Int
+  generatedBy            User         @relation("ReservationLinksCreated", fields: [generatedById], references: [id], onDelete: Restrict)
+  consultantSignatureUrl String
+  expiresAt              DateTime
+  consumedAt             DateTime?
+  reservation            Reservation?
+  createdAt              DateTime     @default(now())
+
+  @@index([propertyId])
+  @@map("reservation_links")
+}

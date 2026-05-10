@@ -26,6 +26,10 @@ model User {
   loginRequests       LoginRequest[] @relation("UserLoginRequests")
   reviewedLoginRequests LoginRequest[] @relation("LoginRequestReviewer")
   notificationRecipients NotificationRecipient[]
+  reservationsCreated     Reservation[]         @relation("ReservationCreator")
+  reservationsConsulted   Reservation[]         @relation("ReservationConsultant")
+  reservationsApproved    Reservation[]         @relation("ReservationApprover")
+  reservationLinksCreated ReservationLink[]     @relation("ReservationLinksCreated")
 
   @@map("users")
 }

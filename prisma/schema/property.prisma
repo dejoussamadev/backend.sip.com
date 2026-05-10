@@ -75,6 +75,9 @@ model Property {
   utilities  PropertyUtility[]
   facilities PropertyFacility[]
 
+  reservations     Reservation[]
+  reservationLinks ReservationLink[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

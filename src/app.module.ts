@@ -22,6 +22,7 @@ import { UploadModule } from './upload/upload.module';
 import { UsersModule } from './users/users.module';
 import { LoginRequestsModule } from './login-requests/login-requests.module';
 import { StatisticsModule } from './statistics/statistics.module';
+import { ReservationsModule } from './reservations/reservations.module';
 import { envValidationSchema } from './config/env.validation';
 
 @Module({
@@ -55,6 +56,7 @@ import { envValidationSchema } from './config/env.validation';
     NotificationsModule,
     LoginRequestsModule,
     StatisticsModule,
+    ReservationsModule,
     UploadModule,
   ],
   controllers: [AppController, HealthController],
