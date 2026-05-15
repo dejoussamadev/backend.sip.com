@@ -1,8 +1,5 @@
-import {
-  Injectable,
-  NotFoundException,
-  ForbiddenException,
-} from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { BookingFeeModality, ReservationStatus, Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -11,6 +8,9 @@ import { ErrorCatalogService } from '../common/errors/error-catalog.service';
 import { AppValidationException } from '../common/errors/app-validation.exception';
 import { normalizePagination } from '../common/utils/pagination.util';
 import { generateReservationCode } from './utils/reservation-code.util';
+import { buildReservationUpdateData } from './utils/reservation-update.utils';
+import { mapReservationToResponse } from './utils/reservation-response.utils';
+import { isMoveInDateValid } from './validators/move-in-date.validator';
 import {
   RESERVATION_SUBMITTED,
   RESERVATION_APPROVED,
@@ -22,8 +22,23 @@ import { SubmitPublicReservationDto } from './dto/submit-public-reservation.dto'
 import { UpdateReservationDto } from './dto/update-reservation.dto';
 import { ReservationQueryDto } from './dto/reservation-query.dto';
 
+/** How long (ms) a reservation link is valid after generation. */
+const RESERVATION_LINK_TTL_MS = 24 * 60 * 60 * 1000;
+
+/** Max retry attempts when a generated code collides on the unique constraint. */
+const RESERVATION_CODE_MAX_RETRIES = 3;
+
 const DEFAULT_INCLUDE = {
-  property: { include: { type: true, furnishing: true } },
+  property: {
+    select: {
+      name: true,
+      unitNumber: true,
+      range: true,
+      hasUtilities: true,
+      type: { select: { name: true } },
+      furnishing: { select: { name: true } },
+    },
+  },
   consultant: {
     select: { id: true, name: true, email: true, agentCode: true },
   },
@@ -33,11 +48,14 @@ const DEFAULT_INCLUDE = {
 
 @Injectable()
 export class ReservationsService {
+  private readonly logger = new Logger(ReservationsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly notificationsService: NotificationsService,
     private readonly emailService: EmailService,
     private readonly catalog: ErrorCatalogService,
+    private readonly config: ConfigService,
   ) {}
 
   // ────────────────────────────────────────────────────────────
@@ -46,20 +64,44 @@ export class ReservationsService {
 
   async generateLink(
     propertyId: number,
-    generatedById: number,
+    currentUser: { id: number; role: Role },
     consultantSignatureUrl: string,
   ) {
-    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
-    const baseUrl = process.env.FRONTEND_URL || 'http://localhost:4200';
+    const property = await this.prisma.property.findUnique({
+      where: { id: propertyId },
+      select: { id: true, userId: true },
+    });
 
-    for (let attempt = 0; attempt < 3; attempt++) {
+    if (!property) {
+      throw AppValidationException.from(this.catalog, [
+        { field: 'propertyId', code: 'RESERVATION_PROPERTY_NOT_FOUND' },
+      ]);
+    }
+
+    // Agents may only generate links for properties they own.
+    if (currentUser.role === Role.AGENT && property.userId !== currentUser.id) {
+      throw AppValidationException.from(this.catalog, [
+        { field: 'propertyId', code: 'RESERVATION_PROPERTY_NOT_OWNED' },
+      ]);
+    }
+
+    const baseUrl = this.config.get<string>('FRONTEND_URL');
+    if (!baseUrl) {
+      throw AppValidationException.from(this.catalog, [
+        { code: 'RESERVATION_CODE_GENERATION_FAILED' },
+      ]);
+    }
+
+    const expiresAt = new Date(Date.now() + RESERVATION_LINK_TTL_MS);
+
+    for (let attempt = 0; attempt < RESERVATION_CODE_MAX_RETRIES; attempt++) {
       const code = generateReservationCode();
       try {
         await this.prisma.reservationLink.create({
           data: {
             code,
             propertyId,
-            generatedById,
+            generatedById: currentUser.id,
             consultantSignatureUrl,
             expiresAt,
           },
@@ -67,13 +109,13 @@ export class ReservationsService {
         return { url: `${baseUrl}/reservation/${code}`, expiresAt };
       } catch (err: any) {
         if (err?.code !== 'P2002') throw err;
-        // Unique collision — retry with a new code
+        // Unique collision on `code` — retry with a new one
       }
     }
 
-    throw new Error(
-      'Failed to generate a unique reservation code after 3 attempts',
-    );
+    throw AppValidationException.from(this.catalog, [
+      { code: 'RESERVATION_CODE_GENERATION_FAILED' },
+    ]);
   }
 
   // ────────────────────────────────────────────────────────────
@@ -103,16 +145,25 @@ export class ReservationsService {
   // Shared validation helpers
   // ────────────────────────────────────────────────────────────
 
-  private validateIdField(idType: string, idNumber: string) {
+  private validateIdField(idType: string, idNumber: string): void {
     if (!validateIdNumber(idType, idNumber)) {
       throw AppValidationException.from(this.catalog, [
         {
           field: 'idNumber',
+          // 'ID' matches ReservationIdType.ID enum value
           code:
             idType === 'ID'
               ? 'RESERVATION_ID_NUMBER_INVALID'
               : 'RESERVATION_PASSPORT_INVALID',
         },
+      ]);
+    }
+  }
+
+  private validateMoveInDate(moveInDate: string): void {
+    if (!isMoveInDateValid(moveInDate)) {
+      throw AppValidationException.from(this.catalog, [
+        { field: 'moveInDate', code: 'RESERVATION_MOVE_IN_DATE_PAST' },
       ]);
     }
   }
@@ -125,8 +176,11 @@ export class ReservationsService {
     const property = await this.prisma.property.findUnique({
       where: { id: propertyId },
     });
+
     if (!property) {
-      throw new NotFoundException(`Property ${propertyId} not found`);
+      throw AppValidationException.from(this.catalog, [
+        { field: 'propertyId', code: 'RESERVATION_PROPERTY_NOT_FOUND' },
+      ]);
     }
 
     let paidBookingFee: number;
@@ -150,7 +204,10 @@ export class ReservationsService {
     return { property, paidBookingFee };
   }
 
-  private async dispatchSubmitNotifications(reservation: any, property: any) {
+  private async dispatchSubmitNotifications(
+    reservation: any,
+    property: any,
+  ): Promise<void> {
     const emailCtx: EmailContext = {
       reservationId: reservation.id,
       clientFirstName: reservation.firstName,
@@ -161,7 +218,7 @@ export class ReservationsService {
       reservationDate: new Date(reservation.reservationDate).toISOString(),
     };
 
-    await Promise.allSettled([
+    const results = await Promise.allSettled([
       this.notificationsService.notify({
         type: RESERVATION_SUBMITTED,
         message: `New reservation #${reservation.id} submitted by ${reservation.firstName} ${reservation.lastName} for property "${property.name}".`,
@@ -183,6 +240,14 @@ export class ReservationsService {
         },
       ),
     ]);
+
+    for (const result of results) {
+      if (result.status === 'rejected') {
+        this.logger.error(
+          `Notification dispatch failed for reservation #${reservation.id}: ${result.reason}`,
+        );
+      }
+    }
   }
 
   // ────────────────────────────────────────────────────────────
@@ -192,9 +257,10 @@ export class ReservationsService {
   async submitInternal(
     dto: SubmitReservationDto,
     files: any,
-    createdById: number,
+    currentUser: { id: number; role: Role },
   ) {
     this.validateIdField(dto.idType, dto.idNumber);
+    this.validateMoveInDate(dto.moveInDate);
 
     const { property, paidBookingFee } = await this.resolvePropertyAndFee(
       dto.propertyId,
@@ -202,49 +268,58 @@ export class ReservationsService {
       dto.paidBookingFee,
     );
 
+    // Agents may only create reservations for properties they own.
+    if (currentUser.role === Role.AGENT && property.userId !== currentUser.id) {
+      throw AppValidationException.from(this.catalog, [
+        { field: 'propertyId', code: 'RESERVATION_PROPERTY_NOT_OWNED' },
+      ]);
+    }
+
     const consultantId: number = property.userId;
 
     const clientSignatureUrl: string = files?.clientSignature?.[0]?.path ?? '';
     const consultantSignatureUrl: string =
       files?.consultantSignature?.[0]?.path ?? '';
-    const paymentProofUrl: string | undefined =
-      files?.paymentProof?.[0]?.path ?? undefined;
+    const paymentProofUrl: string | null =
+      files?.paymentProof?.[0]?.path ?? null;
 
-    const reservation = await this.prisma.reservation.create({
-      data: {
-        reservationDate: new Date(dto.reservationDate),
-        firstName: dto.firstName,
-        lastName: dto.lastName,
-        nationality: dto.nationality,
-        idType: dto.idType,
-        idNumber: dto.idNumber,
-        email: dto.email,
-        phone: dto.phone,
-        countryCode: dto.countryCode,
-        propertyId: dto.propertyId,
-        contractPeriod: dto.contractPeriod,
-        paymentModality: dto.paymentModality,
-        utilitiesIncluded: dto.utilitiesIncluded,
-        moveInDate: new Date(dto.moveInDate),
-        contractStartDate: new Date(dto.contractStartDate),
-        bookingFeeModality: dto.bookingFeeModality,
-        paidBookingFee,
-        paymentMethod: dto.paymentMethod,
-        securityDeposit: dto.securityDeposit,
-        paymentProofUrl: paymentProofUrl ?? null,
-        consultantId,
-        clientSignatureUrl,
-        consultantSignatureUrl,
-        termsAcceptedAt: new Date(),
-        status: ReservationStatus.PENDING_APPROVAL,
-        createdById,
-      },
-      include: DEFAULT_INCLUDE,
-    });
+    const reservation = await this.prisma.$transaction(async (tx) =>
+      tx.reservation.create({
+        data: {
+          reservationDate: new Date(dto.reservationDate),
+          firstName: dto.firstName,
+          lastName: dto.lastName,
+          nationality: dto.nationality,
+          idType: dto.idType,
+          idNumber: dto.idNumber,
+          email: dto.email,
+          phone: dto.phone,
+          countryCode: dto.countryCode,
+          propertyId: dto.propertyId,
+          contractPeriod: dto.contractPeriod,
+          paymentModality: dto.paymentModality,
+          utilitiesIncluded: dto.utilitiesIncluded,
+          moveInDate: new Date(dto.moveInDate),
+          contractStartDate: new Date(dto.contractStartDate),
+          bookingFeeModality: dto.bookingFeeModality,
+          paidBookingFee,
+          paymentMethod: dto.paymentMethod,
+          securityDeposit: dto.securityDeposit,
+          paymentProofUrl,
+          consultantId,
+          clientSignatureUrl,
+          consultantSignatureUrl,
+          termsAcceptedAt: new Date(),
+          status: ReservationStatus.PENDING_APPROVAL,
+          createdById: currentUser.id,
+        },
+        include: DEFAULT_INCLUDE,
+      }),
+    );
 
     await this.dispatchSubmitNotifications(reservation, property);
 
-    return reservation;
+    return mapReservationToResponse(reservation);
   }
 
   // ────────────────────────────────────────────────────────────
@@ -256,6 +331,7 @@ export class ReservationsService {
     const consultantId: number = link.property.userId;
 
     this.validateIdField(dto.idType, dto.idNumber);
+    this.validateMoveInDate(dto.moveInDate);
 
     const { property, paidBookingFee } = await this.resolvePropertyAndFee(
       propertyId,
@@ -265,15 +341,23 @@ export class ReservationsService {
 
     const clientSignatureUrl: string = files?.clientSignature?.[0]?.path ?? '';
     const consultantSignatureUrl: string = link.consultantSignatureUrl ?? '';
-    const paymentProofUrl: string | undefined =
-      files?.paymentProof?.[0]?.path ?? undefined;
+    const paymentProofUrl: string | null =
+      files?.paymentProof?.[0]?.path ?? null;
 
     const reservation = await this.prisma.$transaction(async (tx) => {
-      // Mark the link as consumed atomically
-      await tx.reservationLink.update({
-        where: { id: link.id },
+      // Re-check consumedAt inside the transaction to prevent a race condition
+      // where two concurrent requests both pass the guard check but only one
+      // should produce a reservation.
+      const consumed = await tx.reservationLink.updateMany({
+        where: { id: link.id, consumedAt: null },
         data: { consumedAt: new Date() },
       });
+
+      if (consumed.count === 0) {
+        throw AppValidationException.from(this.catalog, [
+          { code: 'RESERVATION_LINK_ALREADY_CONSUMED' },
+        ]);
+      }
 
       return tx.reservation.create({
         data: {
@@ -296,7 +380,7 @@ export class ReservationsService {
           paidBookingFee,
           paymentMethod: dto.paymentMethod,
           securityDeposit: dto.securityDeposit,
-          paymentProofUrl: paymentProofUrl ?? null,
+          paymentProofUrl,
           consultantId,
           clientSignatureUrl,
           consultantSignatureUrl,
@@ -311,7 +395,7 @@ export class ReservationsService {
 
     await this.dispatchSubmitNotifications(reservation, property);
 
-    return reservation;
+    return mapReservationToResponse(reservation);
   }
 
   // ────────────────────────────────────────────────────────────
@@ -356,7 +440,7 @@ export class ReservationsService {
     ]);
 
     return {
-      data,
+      data: data.map(mapReservationToResponse),
       meta: {
         total,
         page,
@@ -376,8 +460,11 @@ export class ReservationsService {
       include: DEFAULT_INCLUDE,
     });
 
-    if (!reservation)
-      throw new NotFoundException(`Reservation ${id} not found`);
+    if (!reservation) {
+      throw AppValidationException.from(this.catalog, [
+        { code: 'RESERVATION_NOT_FOUND' },
+      ]);
+    }
 
     const isAgent = currentUser.role === Role.AGENT;
     if (
@@ -385,12 +472,12 @@ export class ReservationsService {
       reservation.createdById !== currentUser.id &&
       reservation.consultantId !== currentUser.id
     ) {
-      throw new ForbiddenException(
-        'You do not have access to this reservation',
-      );
+      throw AppValidationException.from(this.catalog, [
+        { code: 'RESERVATION_ACCESS_DENIED' },
+      ]);
     }
 
-    return reservation;
+    return mapReservationToResponse(reservation);
   }
 
   // ────────────────────────────────────────────────────────────
@@ -403,8 +490,11 @@ export class ReservationsService {
       include: { property: true },
     });
 
-    if (!reservation)
-      throw new NotFoundException(`Reservation ${id} not found`);
+    if (!reservation) {
+      throw AppValidationException.from(this.catalog, [
+        { code: 'RESERVATION_NOT_FOUND' },
+      ]);
+    }
 
     if (reservation.status !== ReservationStatus.PENDING_APPROVAL) {
       throw AppValidationException.from(this.catalog, [
@@ -429,7 +519,7 @@ export class ReservationsService {
       propertyName: reservation.property?.name,
     };
 
-    await Promise.allSettled([
+    const results = await Promise.allSettled([
       this.notificationsService.notify({
         type: RESERVATION_APPROVED,
         message: `Reservation #${id} for ${reservation.firstName} ${reservation.lastName} has been approved.`,
@@ -447,7 +537,15 @@ export class ReservationsService {
       ),
     ]);
 
-    return updated;
+    for (const result of results) {
+      if (result.status === 'rejected') {
+        this.logger.error(
+          `Approval notification failed for reservation #${id}: ${result.reason}`,
+        );
+      }
+    }
+
+    return mapReservationToResponse(updated);
   }
 
   // ────────────────────────────────────────────────────────────
@@ -460,8 +558,11 @@ export class ReservationsService {
       include: { property: true },
     });
 
-    if (!reservation)
-      throw new NotFoundException(`Reservation ${id} not found`);
+    if (!reservation) {
+      throw AppValidationException.from(this.catalog, [
+        { code: 'RESERVATION_NOT_FOUND' },
+      ]);
+    }
 
     if (reservation.status !== ReservationStatus.PENDING_APPROVAL) {
       throw AppValidationException.from(this.catalog, [
@@ -488,7 +589,7 @@ export class ReservationsService {
       rejectionReason: reason,
     };
 
-    await Promise.allSettled([
+    const results = await Promise.allSettled([
       this.notificationsService.notify({
         type: RESERVATION_REJECTED,
         message: `Reservation #${id} for ${reservation.firstName} ${reservation.lastName} has been rejected.`,
@@ -506,7 +607,15 @@ export class ReservationsService {
       ),
     ]);
 
-    return updated;
+    for (const result of results) {
+      if (result.status === 'rejected') {
+        this.logger.error(
+          `Rejection notification failed for reservation #${id}: ${result.reason}`,
+        );
+      }
+    }
+
+    return mapReservationToResponse(updated);
   }
 
   // ────────────────────────────────────────────────────────────
@@ -517,39 +626,69 @@ export class ReservationsService {
     const existing = await this.prisma.reservation.findUnique({
       where: { id },
     });
-    if (!existing) throw new NotFoundException(`Reservation ${id} not found`);
 
-    const data: any = { ...dto };
+    if (!existing) {
+      throw AppValidationException.from(this.catalog, [
+        { code: 'RESERVATION_NOT_FOUND' },
+      ]);
+    }
 
-    // Resolve dates if provided
-    if (dto.reservationDate)
-      data.reservationDate = new Date(dto.reservationDate);
-    if (dto.moveInDate) data.moveInDate = new Date(dto.moveInDate);
-    if (dto.contractStartDate)
-      data.contractStartDate = new Date(dto.contractStartDate);
+    // PartialType/OmitType produces an opaque mapped type; cast to access fields.
+    const patch = dto as Record<string, unknown>;
 
-    // Validate idNumber if relevant fields are being updated
-    const idType = dto.idType ?? existing.idType;
-    const idNumber = dto.idNumber ?? existing.idNumber;
-    if (dto.idType !== undefined || dto.idNumber !== undefined) {
+    // Build safe update payload from explicit allowlist
+    const data = buildReservationUpdateData(patch);
+
+    // If id fields are being updated, re-validate them
+    if (patch['idType'] !== undefined || patch['idNumber'] !== undefined) {
+      const idType = (patch['idType'] ?? existing.idType) as string;
+      const idNumber = (patch['idNumber'] ?? existing.idNumber) as string;
       this.validateIdField(idType, idNumber);
+    }
+
+    // If move-in date is being updated, validate it
+    if (patch['moveInDate'] !== undefined) {
+      this.validateMoveInDate(patch['moveInDate'] as string);
+    }
+
+    // If booking-fee fields are being updated, re-resolve and validate invariants
+    const feeFieldsTouched =
+      patch['propertyId'] !== undefined ||
+      patch['bookingFeeModality'] !== undefined ||
+      patch['paidBookingFee'] !== undefined;
+
+    if (feeFieldsTouched) {
+      const propertyId = (patch['propertyId'] ?? existing.propertyId) as number;
+      const modality = (patch['bookingFeeModality'] ??
+        existing.bookingFeeModality) as BookingFeeModality;
+      const paidFeeInput = (patch['paidBookingFee'] ??
+        Number(existing.paidBookingFee)) as number;
+
+      const { paidBookingFee } = await this.resolvePropertyAndFee(
+        propertyId,
+        modality,
+        paidFeeInput,
+      );
+      data['paidBookingFee'] = paidBookingFee;
     }
 
     // Replace file paths if new files are provided
     if (files?.clientSignature?.[0]?.path) {
-      data.clientSignatureUrl = files.clientSignature[0].path;
+      data['clientSignatureUrl'] = files.clientSignature[0].path;
     }
     if (files?.consultantSignature?.[0]?.path) {
-      data.consultantSignatureUrl = files.consultantSignature[0].path;
+      data['consultantSignatureUrl'] = files.consultantSignature[0].path;
     }
     if (files?.paymentProof?.[0]?.path) {
-      data.paymentProofUrl = files.paymentProof[0].path;
+      data['paymentProofUrl'] = files.paymentProof[0].path;
     }
 
-    return this.prisma.reservation.update({
+    const updated = await this.prisma.reservation.update({
       where: { id },
       data,
       include: DEFAULT_INCLUDE,
     });
+
+    return mapReservationToResponse(updated);
   }
 }

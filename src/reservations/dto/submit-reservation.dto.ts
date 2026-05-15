@@ -3,6 +3,7 @@ import {
   IsDateString,
   IsEmail,
   IsEnum,
+  Equals,
   IsInt,
   IsNotEmpty,
   IsNumber,
@@ -88,7 +89,7 @@ export class SubmitReservationDto {
   @IsEnum(SecurityDepositStatus)
   securityDeposit: SecurityDepositStatus;
 
-  @IsBoolean()
+  @Equals(true, { message: 'You must accept the terms and conditions.' })
   @Transform(({ value }) => value === 'true' || value === true)
   termsAccepted: boolean;
 }

@@ -8,6 +8,7 @@ import {
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { Request } from 'express';
 import { ReservationsService } from './reservations.service';
 import { SubmitPublicReservationDto } from './dto/submit-public-reservation.dto';
@@ -15,11 +16,12 @@ import { ReservationLinkGuard } from './guards/reservation-link.guard';
 import { ReservationFilesInterceptor } from './interceptors/reservation-files.interceptor';
 
 @Controller('public/reservations')
+@UseGuards(ReservationLinkGuard)
 export class ReservationsPublicController {
   constructor(private readonly reservationsService: ReservationsService) {}
 
   @Get('context')
-  @UseGuards(ReservationLinkGuard)
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
   getContext(@Req() req: Request) {
     return this.reservationsService.getPublicContext(
       (req as any).reservationLink,
@@ -27,7 +29,7 @@ export class ReservationsPublicController {
   }
 
   @Post()
-  @UseGuards(ReservationLinkGuard)
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @UseInterceptors(ReservationFilesInterceptor())
   submitPublic(
     @Body() dto: SubmitPublicReservationDto,

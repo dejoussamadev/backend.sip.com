@@ -1,4 +1,4 @@
-import { IsOptional, IsInt, Min, IsEnum, IsString } from 'class-validator';
+import { IsOptional, IsInt, Min, Max, IsEnum } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ContractPeriod, ReservationStatus } from '@prisma/client';
 
@@ -24,10 +24,15 @@ export class ReservationQueryDto {
   status?: ReservationStatus;
 
   @IsOptional()
-  @IsString()
-  page?: string;
+  @IsInt()
+  @Min(1)
+  @Type(() => Number)
+  page?: number;
 
   @IsOptional()
-  @IsString()
-  limit?: string;
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  @Type(() => Number)
+  limit?: number;
 }

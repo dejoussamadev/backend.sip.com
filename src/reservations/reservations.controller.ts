@@ -7,16 +7,15 @@ import {
   Post,
   Put,
   Query,
-  Req,
   UploadedFiles,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
-import { Request } from 'express';
 import { Role } from '@prisma/client';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { ReservationsService } from './reservations.service';
 import { CreateReservationLinkDto } from './dto/create-reservation-link.dto';
 import { SubmitReservationDto } from './dto/submit-reservation.dto';
@@ -39,14 +38,12 @@ export class ReservationsController {
   generateLink(
     @Body() dto: CreateReservationLinkDto,
     @UploadedFiles() files: any,
-    @Req() req: Request,
+    @CurrentUser() currentUser: { id: number; role: Role },
   ) {
-    const user = req.user as any;
-    const signatureUrl: string =
-      files?.consultantSignature?.[0]?.path ?? '';
+    const signatureUrl: string = files?.consultantSignature?.[0]?.path ?? '';
     return this.reservationsService.generateLink(
       dto.propertyId,
-      user.id,
+      currentUser,
       signatureUrl,
     );
   }
@@ -57,27 +54,27 @@ export class ReservationsController {
   create(
     @Body() dto: SubmitReservationDto,
     @UploadedFiles() files: any,
-    @Req() req: Request,
+    @CurrentUser() currentUser: { id: number; role: Role },
   ) {
-    const user = req.user as any;
-    return this.reservationsService.submitInternal(dto, files, user.id);
+    return this.reservationsService.submitInternal(dto, files, currentUser);
   }
 
   @Get()
   @Roles(Role.ADMIN, Role.AGENT)
-  findAll(@Query() query: ReservationQueryDto, @Req() req: Request) {
-    const user = req.user as any;
-    return this.reservationsService.findAll(query, user);
+  findAll(
+    @Query() query: ReservationQueryDto,
+    @CurrentUser() currentUser: any,
+  ) {
+    return this.reservationsService.findAll(query, currentUser);
   }
 
   @Get(':id')
   @Roles(Role.ADMIN, Role.AGENT)
   findOne(
     @Param('id', ParseIntPipe) id: number,
-    @Req() req: Request,
+    @CurrentUser() currentUser: any,
   ) {
-    const user = req.user as any;
-    return this.reservationsService.findOne(id, user);
+    return this.reservationsService.findOne(id, currentUser);
   }
 
   @Put(':id')
@@ -95,10 +92,9 @@ export class ReservationsController {
   @Roles(Role.ADMIN)
   approve(
     @Param('id', ParseIntPipe) id: number,
-    @Req() req: Request,
+    @CurrentUser('id') approverId: number,
   ) {
-    const user = req.user as any;
-    return this.reservationsService.approve(id, user.id);
+    return this.reservationsService.approve(id, approverId);
   }
 
   @Post(':id/reject')
@@ -106,9 +102,8 @@ export class ReservationsController {
   reject(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: RejectReservationDto,
-    @Req() req: Request,
+    @CurrentUser('id') approverId: number,
   ) {
-    const user = req.user as any;
-    return this.reservationsService.reject(id, user.id, dto.reason);
+    return this.reservationsService.reject(id, approverId, dto.reason);
   }
 }
