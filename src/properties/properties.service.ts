@@ -1,7 +1,4 @@
-import {
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreatePropertyDto } from './dto/create-property.dto';
 import { UpdatePropertyDto } from './dto/update-property.dto';
@@ -247,10 +244,7 @@ export class PropertiesService {
     return property;
   }
 
-  async findAll(
-    filters: any = {},
-    currentUser?: { id: number; role: Role },
-  ) {
+  async findAll(filters: any = {}, currentUser?: { id: number; role: Role }) {
     const {
       keyword,
       status,
@@ -404,6 +398,7 @@ export class PropertiesService {
       location: true,
       user: true,
       landlord: true,
+      furnishing: true,
     };
 
     const [data, total] = await Promise.all([
@@ -512,8 +507,11 @@ export class PropertiesService {
       const currentImages = Array.isArray((current as any).images)
         ? (current as any).images
         : [];
-      const keptUrls = dto.keptUrls !== undefined ? dto.keptUrls : currentImages;
-      updateData.images = Array.from(new Set([...(keptUrls ?? []), ...(dto.imageUrls ?? [])]));
+      const keptUrls =
+        dto.keptUrls !== undefined ? dto.keptUrls : currentImages;
+      updateData.images = Array.from(
+        new Set([...(keptUrls ?? []), ...(dto.imageUrls ?? [])]),
+      );
     }
     if (dto.documents?.length) {
       updateData.document = dto.documents[0];
@@ -538,7 +536,9 @@ export class PropertiesService {
       updateData.status = this.ensureValidStatus(dto.status);
 
     const facilityIds =
-      dto.facilityIds !== undefined ? this.dedupeIds(dto.facilityIds) : undefined;
+      dto.facilityIds !== undefined
+        ? this.dedupeIds(dto.facilityIds)
+        : undefined;
     const utilityIds =
       dto.utilityIds !== undefined ? this.dedupeIds(dto.utilityIds) : undefined;
 

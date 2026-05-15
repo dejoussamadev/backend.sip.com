@@ -10,6 +10,7 @@ export const envValidationSchema = Joi.object({
     .required(),
   JWT_SECRET: Joi.string().min(16).required(),
   JWT_EXPIRATION: Joi.string().default('7d'),
+  FRONTEND_URL: Joi.string().uri().required(),
   SMTP_HOST: Joi.string().hostname(),
   SMTP_PORT: Joi.number().integer().min(1).max(65535),
   SMTP_USER: Joi.string().allow(''),

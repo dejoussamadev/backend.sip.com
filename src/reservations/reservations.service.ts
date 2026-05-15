@@ -1,0 +1,694 @@
+import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { BookingFeeModality, ReservationStatus, Role } from '@prisma/client';
+import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
+import { EmailService, EmailContext } from '../notifications/email.service';
+import { ErrorCatalogService } from '../common/errors/error-catalog.service';
+import { AppValidationException } from '../common/errors/app-validation.exception';
+import { normalizePagination } from '../common/utils/pagination.util';
+import { generateReservationCode } from './utils/reservation-code.util';
+import { buildReservationUpdateData } from './utils/reservation-update.utils';
+import { mapReservationToResponse } from './utils/reservation-response.utils';
+import { isMoveInDateValid } from './validators/move-in-date.validator';
+import {
+  RESERVATION_SUBMITTED,
+  RESERVATION_APPROVED,
+  RESERVATION_REJECTED,
+} from '../notifications/notification-types';
+import { validateIdNumber } from './validators/id-or-passport.validator';
+import { SubmitReservationDto } from './dto/submit-reservation.dto';
+import { SubmitPublicReservationDto } from './dto/submit-public-reservation.dto';
+import { UpdateReservationDto } from './dto/update-reservation.dto';
+import { ReservationQueryDto } from './dto/reservation-query.dto';
+
+/** How long (ms) a reservation link is valid after generation. */
+const RESERVATION_LINK_TTL_MS = 24 * 60 * 60 * 1000;
+
+/** Max retry attempts when a generated code collides on the unique constraint. */
+const RESERVATION_CODE_MAX_RETRIES = 3;
+
+const DEFAULT_INCLUDE = {
+  property: {
+    select: {
+      name: true,
+      unitNumber: true,
+      range: true,
+      hasUtilities: true,
+      type: { select: { name: true } },
+      furnishing: { select: { name: true } },
+    },
+  },
+  consultant: {
+    select: { id: true, name: true, email: true, agentCode: true },
+  },
+  createdBy: { select: { id: true, name: true } },
+  approvedBy: { select: { id: true, name: true } },
+};
+
+@Injectable()
+export class ReservationsService {
+  private readonly logger = new Logger(ReservationsService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notificationsService: NotificationsService,
+    private readonly emailService: EmailService,
+    private readonly catalog: ErrorCatalogService,
+    private readonly config: ConfigService,
+  ) {}
+
+  // ────────────────────────────────────────────────────────────
+  // Link generation
+  // ────────────────────────────────────────────────────────────
+
+  async generateLink(
+    propertyId: number,
+    currentUser: { id: number; role: Role },
+    consultantSignatureUrl: string,
+  ) {
+    const property = await this.prisma.property.findUnique({
+      where: { id: propertyId },
+      select: { id: true, userId: true },
+    });
+
+    if (!property) {
+      throw AppValidationException.from(this.catalog, [
+        { field: 'propertyId', code: 'RESERVATION_PROPERTY_NOT_FOUND' },
+      ]);
+    }
+
+    // Agents may only generate links for properties they own.
+    if (currentUser.role === Role.AGENT && property.userId !== currentUser.id) {
+      throw AppValidationException.from(this.catalog, [
+        { field: 'propertyId', code: 'RESERVATION_PROPERTY_NOT_OWNED' },
+      ]);
+    }
+
+    const baseUrl = this.config.get<string>('FRONTEND_URL');
+    if (!baseUrl) {
+      throw AppValidationException.from(this.catalog, [
+        { code: 'RESERVATION_CODE_GENERATION_FAILED' },
+      ]);
+    }
+
+    const expiresAt = new Date(Date.now() + RESERVATION_LINK_TTL_MS);
+
+    for (let attempt = 0; attempt < RESERVATION_CODE_MAX_RETRIES; attempt++) {
+      const code = generateReservationCode();
+      try {
+        await this.prisma.reservationLink.create({
+          data: {
+            code,
+            propertyId,
+            generatedById: currentUser.id,
+            consultantSignatureUrl,
+            expiresAt,
+          },
+        });
+        return { url: `${baseUrl}/reservation/${code}`, expiresAt };
+      } catch (err: any) {
+        if (err?.code !== 'P2002') throw err;
+        // Unique collision on `code` — retry with a new one
+      }
+    }
+
+    throw AppValidationException.from(this.catalog, [
+      { code: 'RESERVATION_CODE_GENERATION_FAILED' },
+    ]);
+  }
+
+  // ────────────────────────────────────────────────────────────
+  // Public context
+  // ────────────────────────────────────────────────────────────
+
+  getPublicContext(link: any) {
+    const property = link.property;
+    return {
+      property: {
+        name: property.name,
+        unitNumber: property.unitNumber,
+        type: { name: property.type?.name },
+        furnishing: { name: property.furnishing?.name },
+        hasUtilities: property.hasUtilities,
+        range: property.range,
+      },
+      consultant: {
+        name: property.user?.name,
+        agentCode: property.user?.agentCode,
+      },
+      consultantSignatureUrl: link.consultantSignatureUrl,
+    };
+  }
+
+  // ────────────────────────────────────────────────────────────
+  // Shared validation helpers
+  // ────────────────────────────────────────────────────────────
+
+  private validateIdField(idType: string, idNumber: string): void {
+    if (!validateIdNumber(idType, idNumber)) {
+      throw AppValidationException.from(this.catalog, [
+        {
+          field: 'idNumber',
+          // 'ID' matches ReservationIdType.ID enum value
+          code:
+            idType === 'ID'
+              ? 'RESERVATION_ID_NUMBER_INVALID'
+              : 'RESERVATION_PASSPORT_INVALID',
+        },
+      ]);
+    }
+  }
+
+  private validateMoveInDate(moveInDate: string): void {
+    if (!isMoveInDateValid(moveInDate)) {
+      throw AppValidationException.from(this.catalog, [
+        { field: 'moveInDate', code: 'RESERVATION_MOVE_IN_DATE_PAST' },
+      ]);
+    }
+  }
+
+  private async resolvePropertyAndFee(
+    propertyId: number,
+    bookingFeeModality: BookingFeeModality,
+    paidBookingFeeInput: number,
+  ): Promise<{ property: any; paidBookingFee: number }> {
+    const property = await this.prisma.property.findUnique({
+      where: { id: propertyId },
+    });
+
+    if (!property) {
+      throw AppValidationException.from(this.catalog, [
+        { field: 'propertyId', code: 'RESERVATION_PROPERTY_NOT_FOUND' },
+      ]);
+    }
+
+    let paidBookingFee: number;
+
+    if (bookingFeeModality === BookingFeeModality.FULL) {
+      paidBookingFee = Number(property.range);
+    } else {
+      // PARTIAL: 0 < paidBookingFee < property.range
+      const rangeValue = Number(property.range);
+      if (paidBookingFeeInput <= 0 || paidBookingFeeInput >= rangeValue) {
+        throw AppValidationException.from(this.catalog, [
+          {
+            field: 'paidBookingFee',
+            code: 'RESERVATION_PAID_BOOKING_FEE_OUT_OF_RANGE',
+          },
+        ]);
+      }
+      paidBookingFee = paidBookingFeeInput;
+    }
+
+    return { property, paidBookingFee };
+  }
+
+  private async dispatchSubmitNotifications(
+    reservation: any,
+    property: any,
+  ): Promise<void> {
+    const emailCtx: EmailContext = {
+      reservationId: reservation.id,
+      clientFirstName: reservation.firstName,
+      clientLastName: reservation.lastName,
+      clientEmail: reservation.email,
+      propertyName: property.name,
+      propertyRef: property.referenceNumber,
+      reservationDate: new Date(reservation.reservationDate).toISOString(),
+    };
+
+    const results = await Promise.allSettled([
+      this.notificationsService.notify({
+        type: RESERVATION_SUBMITTED,
+        message: `New reservation #${reservation.id} submitted by ${reservation.firstName} ${reservation.lastName} for property "${property.name}".`,
+        entityId: reservation.id,
+        emailContext: emailCtx,
+        recipients: {
+          admins: true,
+          userIds: [reservation.consultantId],
+        },
+      }),
+      this.emailService.sendEmail(
+        'RESERVATION_SUBMITTED_CLIENT',
+        [reservation.email],
+        {
+          clientFirstName: reservation.firstName,
+          clientLastName: reservation.lastName,
+          propertyName: property.name,
+          propertyRef: property.referenceNumber,
+        },
+      ),
+    ]);
+
+    for (const result of results) {
+      if (result.status === 'rejected') {
+        this.logger.error(
+          `Notification dispatch failed for reservation #${reservation.id}: ${result.reason}`,
+        );
+      }
+    }
+  }
+
+  // ────────────────────────────────────────────────────────────
+  // Submit (internal — authenticated agent/admin)
+  // ────────────────────────────────────────────────────────────
+
+  async submitInternal(
+    dto: SubmitReservationDto,
+    files: any,
+    currentUser: { id: number; role: Role },
+  ) {
+    this.validateIdField(dto.idType, dto.idNumber);
+    this.validateMoveInDate(dto.moveInDate);
+
+    const { property, paidBookingFee } = await this.resolvePropertyAndFee(
+      dto.propertyId,
+      dto.bookingFeeModality,
+      dto.paidBookingFee,
+    );
+
+    // Agents may only create reservations for properties they own.
+    if (currentUser.role === Role.AGENT && property.userId !== currentUser.id) {
+      throw AppValidationException.from(this.catalog, [
+        { field: 'propertyId', code: 'RESERVATION_PROPERTY_NOT_OWNED' },
+      ]);
+    }
+
+    const consultantId: number = property.userId;
+
+    const clientSignatureUrl: string = files?.clientSignature?.[0]?.path ?? '';
+    const consultantSignatureUrl: string =
+      files?.consultantSignature?.[0]?.path ?? '';
+    const paymentProofUrl: string | null =
+      files?.paymentProof?.[0]?.path ?? null;
+
+    const reservation = await this.prisma.$transaction(async (tx) =>
+      tx.reservation.create({
+        data: {
+          reservationDate: new Date(dto.reservationDate),
+          firstName: dto.firstName,
+          lastName: dto.lastName,
+          nationality: dto.nationality,
+          idType: dto.idType,
+          idNumber: dto.idNumber,
+          email: dto.email,
+          phone: dto.phone,
+          countryCode: dto.countryCode,
+          propertyId: dto.propertyId,
+          contractPeriod: dto.contractPeriod,
+          paymentModality: dto.paymentModality,
+          utilitiesIncluded: dto.utilitiesIncluded,
+          moveInDate: new Date(dto.moveInDate),
+          contractStartDate: new Date(dto.contractStartDate),
+          bookingFeeModality: dto.bookingFeeModality,
+          paidBookingFee,
+          paymentMethod: dto.paymentMethod,
+          securityDeposit: dto.securityDeposit,
+          paymentProofUrl,
+          consultantId,
+          clientSignatureUrl,
+          consultantSignatureUrl,
+          termsAcceptedAt: new Date(),
+          status: ReservationStatus.PENDING_APPROVAL,
+          createdById: currentUser.id,
+        },
+        include: DEFAULT_INCLUDE,
+      }),
+    );
+
+    await this.dispatchSubmitNotifications(reservation, property);
+
+    return mapReservationToResponse(reservation);
+  }
+
+  // ────────────────────────────────────────────────────────────
+  // Submit (public — via reservation link)
+  // ────────────────────────────────────────────────────────────
+
+  async submitPublic(dto: SubmitPublicReservationDto, files: any, link: any) {
+    const propertyId: number = link.propertyId;
+    const consultantId: number = link.property.userId;
+
+    this.validateIdField(dto.idType, dto.idNumber);
+    this.validateMoveInDate(dto.moveInDate);
+
+    const { property, paidBookingFee } = await this.resolvePropertyAndFee(
+      propertyId,
+      dto.bookingFeeModality,
+      dto.paidBookingFee,
+    );
+
+    const clientSignatureUrl: string = files?.clientSignature?.[0]?.path ?? '';
+    const consultantSignatureUrl: string = link.consultantSignatureUrl ?? '';
+    const paymentProofUrl: string | null =
+      files?.paymentProof?.[0]?.path ?? null;
+
+    const reservation = await this.prisma.$transaction(async (tx) => {
+      // Re-check consumedAt inside the transaction to prevent a race condition
+      // where two concurrent requests both pass the guard check but only one
+      // should produce a reservation.
+      const consumed = await tx.reservationLink.updateMany({
+        where: { id: link.id, consumedAt: null },
+        data: { consumedAt: new Date() },
+      });
+
+      if (consumed.count === 0) {
+        throw AppValidationException.from(this.catalog, [
+          { code: 'RESERVATION_LINK_ALREADY_CONSUMED' },
+        ]);
+      }
+
+      return tx.reservation.create({
+        data: {
+          reservationDate: new Date(dto.reservationDate),
+          firstName: dto.firstName,
+          lastName: dto.lastName,
+          nationality: dto.nationality,
+          idType: dto.idType,
+          idNumber: dto.idNumber,
+          email: dto.email,
+          phone: dto.phone,
+          countryCode: dto.countryCode,
+          propertyId,
+          contractPeriod: dto.contractPeriod,
+          paymentModality: dto.paymentModality,
+          utilitiesIncluded: dto.utilitiesIncluded,
+          moveInDate: new Date(dto.moveInDate),
+          contractStartDate: new Date(dto.contractStartDate),
+          bookingFeeModality: dto.bookingFeeModality,
+          paidBookingFee,
+          paymentMethod: dto.paymentMethod,
+          securityDeposit: dto.securityDeposit,
+          paymentProofUrl,
+          consultantId,
+          clientSignatureUrl,
+          consultantSignatureUrl,
+          termsAcceptedAt: new Date(),
+          status: ReservationStatus.PENDING_APPROVAL,
+          createdById: consultantId,
+          linkId: link.id,
+        },
+        include: DEFAULT_INCLUDE,
+      });
+    });
+
+    await this.dispatchSubmitNotifications(reservation, property);
+
+    return mapReservationToResponse(reservation);
+  }
+
+  // ────────────────────────────────────────────────────────────
+  // List
+  // ────────────────────────────────────────────────────────────
+
+  async findAll(query: ReservationQueryDto, currentUser: any) {
+    const { page, limit, skip } = normalizePagination(
+      query.page,
+      query.limit,
+      10,
+    );
+
+    const isAgent = currentUser.role === Role.AGENT;
+
+    const where: any = {};
+
+    if (query.propertyId) where.propertyId = query.propertyId;
+    if (query.contractPeriod) where.contractPeriod = query.contractPeriod;
+    if (query.status) where.status = query.status;
+
+    if (isAgent) {
+      // Agents can only see reservations they created or are consultant on
+      where.OR = [
+        { createdById: currentUser.id },
+        { consultantId: currentUser.id },
+      ];
+    } else if (query.createdById) {
+      // Admins can filter by createdById
+      where.createdById = query.createdById;
+    }
+
+    const [data, total] = await Promise.all([
+      this.prisma.reservation.findMany({
+        where,
+        include: DEFAULT_INCLUDE,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      this.prisma.reservation.count({ where }),
+    ]);
+
+    return {
+      data: data.map(mapReservationToResponse),
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  // ────────────────────────────────────────────────────────────
+  // Find one
+  // ────────────────────────────────────────────────────────────
+
+  async findOne(id: number, currentUser: any) {
+    const reservation = await this.prisma.reservation.findUnique({
+      where: { id },
+      include: DEFAULT_INCLUDE,
+    });
+
+    if (!reservation) {
+      throw AppValidationException.from(this.catalog, [
+        { code: 'RESERVATION_NOT_FOUND' },
+      ]);
+    }
+
+    const isAgent = currentUser.role === Role.AGENT;
+    if (
+      isAgent &&
+      reservation.createdById !== currentUser.id &&
+      reservation.consultantId !== currentUser.id
+    ) {
+      throw AppValidationException.from(this.catalog, [
+        { code: 'RESERVATION_ACCESS_DENIED' },
+      ]);
+    }
+
+    return mapReservationToResponse(reservation);
+  }
+
+  // ────────────────────────────────────────────────────────────
+  // Approve
+  // ────────────────────────────────────────────────────────────
+
+  async approve(id: number, approverId: number) {
+    const reservation = await this.prisma.reservation.findUnique({
+      where: { id },
+      include: { property: true },
+    });
+
+    if (!reservation) {
+      throw AppValidationException.from(this.catalog, [
+        { code: 'RESERVATION_NOT_FOUND' },
+      ]);
+    }
+
+    if (reservation.status !== ReservationStatus.PENDING_APPROVAL) {
+      throw AppValidationException.from(this.catalog, [
+        { field: 'status', code: 'RESERVATION_NOT_PENDING' },
+      ]);
+    }
+
+    const updated = await this.prisma.reservation.update({
+      where: { id },
+      data: {
+        status: ReservationStatus.APPROVED,
+        approvedById: approverId,
+        approvedAt: new Date(),
+      },
+      include: DEFAULT_INCLUDE,
+    });
+
+    const emailCtx: EmailContext = {
+      reservationId: id,
+      clientFirstName: reservation.firstName,
+      clientLastName: reservation.lastName,
+      propertyName: reservation.property?.name,
+    };
+
+    const results = await Promise.allSettled([
+      this.notificationsService.notify({
+        type: RESERVATION_APPROVED,
+        message: `Reservation #${id} for ${reservation.firstName} ${reservation.lastName} has been approved.`,
+        entityId: id,
+        emailContext: emailCtx,
+        recipients: {
+          admins: false,
+          userIds: [reservation.consultantId, reservation.createdById],
+        },
+      }),
+      this.emailService.sendEmail(
+        'RESERVATION_APPROVED_CLIENT',
+        [reservation.email],
+        emailCtx,
+      ),
+    ]);
+
+    for (const result of results) {
+      if (result.status === 'rejected') {
+        this.logger.error(
+          `Approval notification failed for reservation #${id}: ${result.reason}`,
+        );
+      }
+    }
+
+    return mapReservationToResponse(updated);
+  }
+
+  // ────────────────────────────────────────────────────────────
+  // Reject
+  // ────────────────────────────────────────────────────────────
+
+  async reject(id: number, approverId: number, reason: string) {
+    const reservation = await this.prisma.reservation.findUnique({
+      where: { id },
+      include: { property: true },
+    });
+
+    if (!reservation) {
+      throw AppValidationException.from(this.catalog, [
+        { code: 'RESERVATION_NOT_FOUND' },
+      ]);
+    }
+
+    if (reservation.status !== ReservationStatus.PENDING_APPROVAL) {
+      throw AppValidationException.from(this.catalog, [
+        { field: 'status', code: 'RESERVATION_NOT_PENDING' },
+      ]);
+    }
+
+    const updated = await this.prisma.reservation.update({
+      where: { id },
+      data: {
+        status: ReservationStatus.REJECTED,
+        rejectionReason: reason,
+        approvedById: approverId,
+        approvedAt: new Date(),
+      },
+      include: DEFAULT_INCLUDE,
+    });
+
+    const emailCtx: EmailContext = {
+      reservationId: id,
+      clientFirstName: reservation.firstName,
+      clientLastName: reservation.lastName,
+      propertyName: reservation.property?.name,
+      rejectionReason: reason,
+    };
+
+    const results = await Promise.allSettled([
+      this.notificationsService.notify({
+        type: RESERVATION_REJECTED,
+        message: `Reservation #${id} for ${reservation.firstName} ${reservation.lastName} has been rejected.`,
+        entityId: id,
+        emailContext: emailCtx,
+        recipients: {
+          admins: false,
+          userIds: [reservation.consultantId, reservation.createdById],
+        },
+      }),
+      this.emailService.sendEmail(
+        'RESERVATION_REJECTED_CLIENT',
+        [reservation.email],
+        emailCtx,
+      ),
+    ]);
+
+    for (const result of results) {
+      if (result.status === 'rejected') {
+        this.logger.error(
+          `Rejection notification failed for reservation #${id}: ${result.reason}`,
+        );
+      }
+    }
+
+    return mapReservationToResponse(updated);
+  }
+
+  // ────────────────────────────────────────────────────────────
+  // Update (admin)
+  // ────────────────────────────────────────────────────────────
+
+  async update(id: number, dto: UpdateReservationDto, files?: any) {
+    const existing = await this.prisma.reservation.findUnique({
+      where: { id },
+    });
+
+    if (!existing) {
+      throw AppValidationException.from(this.catalog, [
+        { code: 'RESERVATION_NOT_FOUND' },
+      ]);
+    }
+
+    // PartialType/OmitType produces an opaque mapped type; cast to access fields.
+    const patch = dto as Record<string, unknown>;
+
+    // Build safe update payload from explicit allowlist
+    const data = buildReservationUpdateData(patch);
+
+    // If id fields are being updated, re-validate them
+    if (patch['idType'] !== undefined || patch['idNumber'] !== undefined) {
+      const idType = (patch['idType'] ?? existing.idType) as string;
+      const idNumber = (patch['idNumber'] ?? existing.idNumber) as string;
+      this.validateIdField(idType, idNumber);
+    }
+
+    // If move-in date is being updated, validate it
+    if (patch['moveInDate'] !== undefined) {
+      this.validateMoveInDate(patch['moveInDate'] as string);
+    }
+
+    // If booking-fee fields are being updated, re-resolve and validate invariants
+    const feeFieldsTouched =
+      patch['propertyId'] !== undefined ||
+      patch['bookingFeeModality'] !== undefined ||
+      patch['paidBookingFee'] !== undefined;
+
+    if (feeFieldsTouched) {
+      const propertyId = (patch['propertyId'] ?? existing.propertyId) as number;
+      const modality = (patch['bookingFeeModality'] ??
+        existing.bookingFeeModality) as BookingFeeModality;
+      const paidFeeInput = (patch['paidBookingFee'] ??
+        Number(existing.paidBookingFee)) as number;
+
+      const { paidBookingFee } = await this.resolvePropertyAndFee(
+        propertyId,
+        modality,
+        paidFeeInput,
+      );
+      data['paidBookingFee'] = paidBookingFee;
+    }
+
+    // Replace file paths if new files are provided
+    if (files?.clientSignature?.[0]?.path) {
+      data['clientSignatureUrl'] = files.clientSignature[0].path;
+    }
+    if (files?.consultantSignature?.[0]?.path) {
+      data['consultantSignatureUrl'] = files.consultantSignature[0].path;
+    }
+    if (files?.paymentProof?.[0]?.path) {
+      data['paymentProofUrl'] = files.paymentProof[0].path;
+    }
+
+    const updated = await this.prisma.reservation.update({
+      where: { id },
+      data,
+      include: DEFAULT_INCLUDE,
+    });
+
+    return mapReservationToResponse(updated);
+  }
+}
