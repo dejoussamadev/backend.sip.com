@@ -78,13 +78,6 @@ export class ReservationsService {
       ]);
     }
 
-    // Agents may only generate links for properties they own.
-    if (currentUser.role === Role.AGENT && property.userId !== currentUser.id) {
-      throw AppValidationException.from(this.catalog, [
-        { field: 'propertyId', code: 'RESERVATION_PROPERTY_NOT_OWNED' },
-      ]);
-    }
-
     const baseUrl = this.config.get<string>('FRONTEND_URL');
     if (!baseUrl) {
       throw AppValidationException.from(this.catalog, [
@@ -134,8 +127,8 @@ export class ReservationsService {
         range: property.range,
       },
       consultant: {
-        name: property.user?.name,
-        agentCode: property.user?.agentCode,
+        name: link.generatedBy?.name,
+        agentCode: link.generatedBy?.agentCode,
       },
       consultantSignatureUrl: link.consultantSignatureUrl,
     };
@@ -268,14 +261,7 @@ export class ReservationsService {
       dto.paidBookingFee,
     );
 
-    // Agents may only create reservations for properties they own.
-    if (currentUser.role === Role.AGENT && property.userId !== currentUser.id) {
-      throw AppValidationException.from(this.catalog, [
-        { field: 'propertyId', code: 'RESERVATION_PROPERTY_NOT_OWNED' },
-      ]);
-    }
-
-    const consultantId: number = property.userId;
+    const consultantId: number = currentUser.id;
 
     const clientSignatureUrl: string = files?.clientSignature?.[0]?.path ?? '';
     const consultantSignatureUrl: string =
@@ -328,7 +314,7 @@ export class ReservationsService {
 
   async submitPublic(dto: SubmitPublicReservationDto, files: any, link: any) {
     const propertyId: number = link.propertyId;
-    const consultantId: number = link.property.userId;
+    const consultantId: number = link.generatedById;
 
     this.validateIdField(dto.idType, dto.idNumber);
     this.validateMoveInDate(dto.moveInDate);
