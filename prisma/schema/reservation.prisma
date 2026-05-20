@@ -55,6 +55,7 @@ model Reservation {
 
   propertyId             Int
   property               Property              @relation(fields: [propertyId], references: [id], onDelete: Restrict)
+  unitNumber             String?
 
   contractPeriod         ContractPeriod
   paymentModality        PaymentModality
@@ -107,6 +108,7 @@ model ReservationLink {
   property               Property     @relation(fields: [propertyId], references: [id], onDelete: Restrict)
   generatedById          Int
   generatedBy            User         @relation("ReservationLinksCreated", fields: [generatedById], references: [id], onDelete: Restrict)
+  unitNumber             String?
   consultantSignatureUrl String
   expiresAt              DateTime
   consumedAt             DateTime?
