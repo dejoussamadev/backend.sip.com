@@ -35,12 +35,11 @@ export class ReservationLinkGuard implements CanActivate {
             unitNumber: true,
             range: true,
             hasUtilities: true,
-            userId: true,
-            user: { select: { id: true, name: true, agentCode: true } },
             type: { select: { id: true, name: true } },
             furnishing: { select: { id: true, name: true } },
           },
         },
+        generatedBy: { select: { name: true, agentCode: true } },
       },
     });
 
