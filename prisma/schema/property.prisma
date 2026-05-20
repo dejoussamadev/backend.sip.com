@@ -32,6 +32,7 @@ model Property {
   referenceNumber String          @unique
   name            String
   shortTerm       Boolean         @default(false)
+  multipleUnits   Boolean         @default(false)
   unitNumber      String?
   bathrooms       Int
   size            Float
