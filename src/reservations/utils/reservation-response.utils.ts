@@ -15,7 +15,7 @@ export function mapReservationToResponse(reservation: any): any {
     ...rest,
     paidBookingFee: Number(rest.paidBookingFee),
     propertyName: property.name,
-    unitNumber: property.unitNumber ?? '',
+    unitNumber: reservation.unitNumber ?? property.unitNumber ?? '',
     propertyRange: Number(property.range),
     hasUtilities: property.hasUtilities,
     propertyType: property.type?.name ?? '',
