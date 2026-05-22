@@ -34,7 +34,8 @@ const DEFAULT_INCLUDE = {
       name: true,
       unitNumber: true,
       range: true,
-      downPaymentAmount: true,
+      downPaymentPct: true,
+      commission: true,
       hasUtilities: true,
       type: { select: { name: true } },
       furnishing: { select: { name: true } },
@@ -68,10 +69,18 @@ export class ReservationsService {
     currentUser: { id: number; role: Role },
     consultantSignatureUrl: string,
     unitNumber?: string,
+    commissionPct?: number,
+    downPaymentPct?: number,
   ) {
     const property = await this.prisma.property.findUnique({
       where: { id: propertyId },
-      select: { id: true, userId: true, multipleUnits: true },
+      select: {
+        id: true,
+        userId: true,
+        multipleUnits: true,
+        commission: true,
+        downPaymentPct: true,
+      },
     });
 
     if (!property) {
@@ -95,6 +104,15 @@ export class ReservationsService {
       ]);
     }
 
+    const resolvedCommissionPct =
+      commissionPct ??
+      (property.commission != null ? Number(property.commission) : null);
+    const resolvedDownPaymentPct =
+      downPaymentPct ??
+      (property.downPaymentPct != null
+        ? Number(property.downPaymentPct)
+        : null);
+
     const expiresAt = new Date(Date.now() + RESERVATION_LINK_TTL_MS);
 
     for (let attempt = 0; attempt < RESERVATION_CODE_MAX_RETRIES; attempt++) {
@@ -108,6 +126,8 @@ export class ReservationsService {
             consultantSignatureUrl,
             expiresAt,
             unitNumber: property.multipleUnits ? (unitNumber ?? null) : null,
+            commissionPct: resolvedCommissionPct,
+            downPaymentPct: resolvedDownPaymentPct,
           },
         });
         return { url: `${baseUrl}/reservation/${code}`, expiresAt };
@@ -136,6 +156,10 @@ export class ReservationsService {
         furnishing: { name: property.furnishing?.name },
         hasUtilities: property.hasUtilities,
         range: property.range,
+        commissionPct:
+          link.commissionPct != null ? Number(link.commissionPct) : null,
+        downPaymentPct:
+          link.downPaymentPct != null ? Number(link.downPaymentPct) : null,
       },
       consultant: {
         name: link.generatedBy?.name,
@@ -285,7 +309,11 @@ export class ReservationsService {
           moveInDate: dto.moveInDate ? new Date(dto.moveInDate) : null,
           contractStartDate: new Date(dto.contractStartDate),
           sellingPrice: dto.sellingPrice,
-          downPaymentAmount: dto.downPaymentAmount ?? null,
+          downPaymentPct: dto.downPaymentPct ?? null,
+          // Commission is the agent's earning — copied from the property
+          // at submit time (form does not expose it to the agent/buyer).
+          commissionPct:
+            property.commission != null ? Number(property.commission) : null,
           reservationFeeAmount: dto.reservationFeeAmount,
           paymentMethod: dto.paymentMethod,
           paymentProofUrl,
@@ -356,7 +384,10 @@ export class ReservationsService {
           moveInDate: dto.moveInDate ? new Date(dto.moveInDate) : null,
           contractStartDate: new Date(dto.contractStartDate),
           sellingPrice: dto.sellingPrice,
-          downPaymentAmount: dto.downPaymentAmount ?? null,
+          downPaymentPct:
+            link.downPaymentPct != null ? Number(link.downPaymentPct) : null,
+          commissionPct:
+            link.commissionPct != null ? Number(link.commissionPct) : null,
           reservationFeeAmount: dto.reservationFeeAmount,
           paymentMethod: dto.paymentMethod,
           paymentProofUrl,

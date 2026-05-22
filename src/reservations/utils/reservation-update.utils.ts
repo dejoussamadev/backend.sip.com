@@ -19,7 +19,8 @@ const UPDATABLE_RESERVATION_FIELDS = [
   'moveInDate',
   'contractStartDate',
   'sellingPrice',
-  'downPaymentAmount',
+  'downPaymentPct',
+  'commissionPct',
   'reservationFeeAmount',
   'paymentMethod',
 ] as const;
