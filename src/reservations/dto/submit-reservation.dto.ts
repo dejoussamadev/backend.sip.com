@@ -2,23 +2,22 @@ import {
   IsBoolean,
   IsDateString,
   IsEmail,
-  IsEnum,
   Equals,
   IsInt,
-  IsNotEmpty,
   IsNumber,
   IsOptional,
   IsString,
+  IsNotEmpty,
+  IsEnum,
   Min,
+  Max,
 } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 import {
-  BookingFeeModality,
   ContractPeriod,
   PaymentMethod,
   PaymentModality,
   ReservationIdType,
-  SecurityDepositStatus,
 } from '@prisma/client';
 
 export class SubmitReservationDto {
@@ -66,29 +65,39 @@ export class SubmitReservationDto {
   @IsEnum(PaymentModality)
   paymentModality: PaymentModality;
 
-  @IsBoolean()
-  @Transform(({ value }) => value === 'true' || value === true)
-  utilitiesIncluded: boolean;
-
+  @IsOptional()
   @IsDateString()
-  moveInDate: string;
+  moveInDate?: string;
 
   @IsDateString()
   contractStartDate: string;
 
-  @IsEnum(BookingFeeModality)
-  bookingFeeModality: BookingFeeModality;
+  @IsNumber()
+  @Min(0)
+  @Type(() => Number)
+  sellingPrice: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(100)
+  @Type(() => Number)
+  downPaymentPct?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(100)
+  @Type(() => Number)
+  commissionPct?: number;
 
   @IsNumber()
   @Min(0)
   @Type(() => Number)
-  paidBookingFee: number;
+  reservationFeeAmount: number;
 
   @IsEnum(PaymentMethod)
   paymentMethod: PaymentMethod;
-
-  @IsEnum(SecurityDepositStatus)
-  securityDeposit: SecurityDepositStatus;
 
   @Equals(true, { message: 'You must accept the terms and conditions.' })
   @Transform(({ value }) => value === 'true' || value === true)

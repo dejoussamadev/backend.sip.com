@@ -14,24 +14,15 @@ enum ContractPeriod {
 }
 
 enum PaymentModality {
-  PRORATED
-  NOT_PRORATED
-}
-
-enum BookingFeeModality {
-  FULL
-  PARTIAL
+  INSTALLMENT_OFF_PLAN
+  MORTGAGE
+  CASH_PAYMENT
 }
 
 enum PaymentMethod {
   CASH
   BANK_TRANSFER
   CHEQUE
-}
-
-enum SecurityDepositStatus {
-  PAID
-  UNPAID
 }
 
 enum ReservationStatus {
@@ -59,15 +50,15 @@ model Reservation {
 
   contractPeriod         ContractPeriod
   paymentModality        PaymentModality
-  utilitiesIncluded      Boolean
-  moveInDate             DateTime
+  moveInDate             DateTime?
   contractStartDate      DateTime
 
-  bookingFeeModality     BookingFeeModality
-  paidBookingFee         Decimal               @db.Decimal(15, 2)
+  sellingPrice           Decimal               @db.Decimal(15, 2)
+  downPaymentPct         Decimal?              @db.Decimal(5, 2)
+  commissionPct          Decimal?              @db.Decimal(5, 2)
+  reservationFeeAmount   Decimal               @db.Decimal(15, 2)
 
   paymentMethod          PaymentMethod
-  securityDeposit        SecurityDepositStatus
   paymentProofUrl        String?
 
   consultantId           Int
@@ -109,6 +100,8 @@ model ReservationLink {
   generatedById          Int
   generatedBy            User         @relation("ReservationLinksCreated", fields: [generatedById], references: [id], onDelete: Restrict)
   unitNumber             String?
+  commissionPct          Decimal?     @db.Decimal(5, 2)
+  downPaymentPct         Decimal?     @db.Decimal(5, 2)
   consultantSignatureUrl String
   expiresAt              DateTime
   consumedAt             DateTime?

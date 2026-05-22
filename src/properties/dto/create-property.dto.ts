@@ -10,7 +10,7 @@ import {
   Max,
   ValidateIf,
 } from 'class-validator';
-import { Transform } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   PropertyCategory,
   PropertyType,
@@ -83,6 +83,13 @@ export class CreatePropertyDto {
   @Min(0, { message: 'PROPERTY_COMMISSION_RANGE' })
   @Max(100, { message: 'PROPERTY_COMMISSION_RANGE' })
   commissionPct?: number;
+
+  @IsOptional()
+  @IsNumber({}, { message: 'PROPERTY_DOWN_PAYMENT_RANGE' })
+  @Min(0, { message: 'PROPERTY_DOWN_PAYMENT_RANGE' })
+  @Max(100, { message: 'PROPERTY_DOWN_PAYMENT_RANGE' })
+  @Type(() => Number)
+  downPaymentPct?: number;
 
   @IsOptional()
   @IsEnum(PropertyStatus, { message: 'PROPERTY_STATUS_INVALID' })

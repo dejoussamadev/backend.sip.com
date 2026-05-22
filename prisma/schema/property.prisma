@@ -39,8 +39,9 @@ model Property {
   maidRoom        Boolean
   balcony         String          @default("")
   view            PropertyView?
-  range           Decimal @db.Decimal(15, 2)
-  commission      Decimal @db.Decimal(5, 2)
+  range               Decimal  @db.Decimal(15, 2)
+  commission          Decimal  @db.Decimal(5, 2)
+  downPaymentPct      Decimal? @db.Decimal(5, 2)
   status          PropertyStatus  @default(PENDING)
   expirationDate  DateTime?
   access          PropertyAccess?
