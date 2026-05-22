@@ -10,6 +10,7 @@ import {
   IsNotEmpty,
   IsEnum,
   Min,
+  Max,
 } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 import {
@@ -79,8 +80,16 @@ export class SubmitReservationDto {
   @IsOptional()
   @IsNumber()
   @Min(0)
+  @Max(100)
   @Type(() => Number)
-  downPaymentAmount?: number;
+  downPaymentPct?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(100)
+  @Type(() => Number)
+  commissionPct?: number;
 
   @IsNumber()
   @Min(0)

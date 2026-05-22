@@ -54,7 +54,8 @@ model Reservation {
   contractStartDate      DateTime
 
   sellingPrice           Decimal               @db.Decimal(15, 2)
-  downPaymentAmount      Decimal?              @db.Decimal(15, 2)
+  downPaymentPct         Decimal?              @db.Decimal(5, 2)
+  commissionPct          Decimal?              @db.Decimal(5, 2)
   reservationFeeAmount   Decimal               @db.Decimal(15, 2)
 
   paymentMethod          PaymentMethod
@@ -99,6 +100,8 @@ model ReservationLink {
   generatedById          Int
   generatedBy            User         @relation("ReservationLinksCreated", fields: [generatedById], references: [id], onDelete: Restrict)
   unitNumber             String?
+  commissionPct          Decimal?     @db.Decimal(5, 2)
+  downPaymentPct         Decimal?     @db.Decimal(5, 2)
   consultantSignatureUrl String
   expiresAt              DateTime
   consumedAt             DateTime?

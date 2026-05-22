@@ -46,6 +46,8 @@ export class ReservationsController {
       currentUser,
       signatureUrl,
       dto.unitNumber,
+      dto.commissionPct,
+      dto.downPaymentPct,
     );
   }
 

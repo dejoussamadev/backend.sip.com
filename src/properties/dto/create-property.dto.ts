@@ -85,10 +85,11 @@ export class CreatePropertyDto {
   commissionPct?: number;
 
   @IsOptional()
-  @IsNumber({}, { message: 'PROPERTY_DOWN_PAYMENT_NUMBER' })
-  @Min(0, { message: 'PROPERTY_DOWN_PAYMENT_NUMBER' })
+  @IsNumber({}, { message: 'PROPERTY_DOWN_PAYMENT_RANGE' })
+  @Min(0, { message: 'PROPERTY_DOWN_PAYMENT_RANGE' })
+  @Max(100, { message: 'PROPERTY_DOWN_PAYMENT_RANGE' })
   @Type(() => Number)
-  downPaymentAmount?: number;
+  downPaymentPct?: number;
 
   @IsOptional()
   @IsEnum(PropertyStatus, { message: 'PROPERTY_STATUS_INVALID' })

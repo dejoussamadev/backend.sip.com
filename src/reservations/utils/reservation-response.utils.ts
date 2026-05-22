@@ -15,11 +15,17 @@ export function mapReservationToResponse(reservation: any): any {
     ...rest,
     sellingPrice: Number(rest.sellingPrice),
     reservationFeeAmount: Number(rest.reservationFeeAmount),
-    downPaymentAmount: rest.downPaymentAmount != null ? Number(rest.downPaymentAmount) : null,
+    downPaymentPct:
+      rest.downPaymentPct != null ? Number(rest.downPaymentPct) : null,
+    commissionPct:
+      rest.commissionPct != null ? Number(rest.commissionPct) : null,
     propertyName: property.name,
     unitNumber: reservation.unitNumber ?? property.unitNumber ?? '',
     propertyRange: Number(property.range),
-    propertyDownPaymentAmount: property.downPaymentAmount != null ? Number(property.downPaymentAmount) : null,
+    propertyDownPaymentPct:
+      property.downPaymentPct != null ? Number(property.downPaymentPct) : null,
+    propertyCommissionPct:
+      property.commission != null ? Number(property.commission) : null,
     hasUtilities: property.hasUtilities,
     propertyType: property.type?.name ?? '',
     furnishing: property.furnishing?.name ?? '',
