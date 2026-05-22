@@ -9,7 +9,7 @@ import {
   Min,
   Max,
 } from 'class-validator';
-import { Transform } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   PropertyCategory,
   PropertyType,
@@ -55,6 +55,12 @@ export class CreatePropertyDto {
   @Min(0, { message: 'PROPERTY_COMMISSION_RANGE' })
   @Max(100, { message: 'PROPERTY_COMMISSION_RANGE' })
   commissionPct?: number;
+
+  @IsOptional()
+  @IsNumber({}, { message: 'PROPERTY_DOWN_PAYMENT_NUMBER' })
+  @Min(0, { message: 'PROPERTY_DOWN_PAYMENT_NUMBER' })
+  @Type(() => Number)
+  downPaymentAmount?: number;
 
   @IsOptional() @IsEnum(PropertyStatus, { message: 'PROPERTY_STATUS_INVALID' }) status?: PropertyStatus;
   @IsOptional() @MinDateNow({ message: 'PROPERTY_EXPIRY_PAST' }) expiryDate?: Date;

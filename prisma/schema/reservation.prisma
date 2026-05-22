@@ -14,24 +14,15 @@ enum ContractPeriod {
 }
 
 enum PaymentModality {
-  PRORATED
-  NOT_PRORATED
-}
-
-enum BookingFeeModality {
-  FULL
-  PARTIAL
+  INSTALLMENT_OFF_PLAN
+  MORTGAGE
+  CASH_PAYMENT
 }
 
 enum PaymentMethod {
   CASH
   BANK_TRANSFER
   CHEQUE
-}
-
-enum SecurityDepositStatus {
-  PAID
-  UNPAID
 }
 
 enum ReservationStatus {
@@ -58,15 +49,14 @@ model Reservation {
 
   contractPeriod         ContractPeriod
   paymentModality        PaymentModality
-  utilitiesIncluded      Boolean
-  moveInDate             DateTime
+  moveInDate             DateTime?
   contractStartDate      DateTime
 
-  bookingFeeModality     BookingFeeModality
-  paidBookingFee         Decimal               @db.Decimal(15, 2)
+  sellingPrice           Decimal               @db.Decimal(15, 2)
+  downPaymentAmount      Decimal?              @db.Decimal(15, 2)
+  reservationFeeAmount   Decimal               @db.Decimal(15, 2)
 
   paymentMethod          PaymentMethod
-  securityDeposit        SecurityDepositStatus
   paymentProofUrl        String?
 
   consultantId           Int

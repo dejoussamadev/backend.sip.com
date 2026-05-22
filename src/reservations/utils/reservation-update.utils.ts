@@ -16,13 +16,12 @@ const UPDATABLE_RESERVATION_FIELDS = [
   'propertyId',
   'contractPeriod',
   'paymentModality',
-  'utilitiesIncluded',
   'moveInDate',
   'contractStartDate',
-  'bookingFeeModality',
-  'paidBookingFee',
+  'sellingPrice',
+  'downPaymentAmount',
+  'reservationFeeAmount',
   'paymentMethod',
-  'securityDeposit',
 ] as const;
 
 /**

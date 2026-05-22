@@ -161,6 +161,7 @@ export class PropertiesService {
       view: dto.view ?? null,
       range: dto.price ?? 0,
       commission: dto.commissionPct ?? 0,
+      downPaymentAmount: dto.downPaymentAmount ?? null,
       status: resolvedStatus,
       expirationDate: dto.expiryDate
         ? typeof dto.expiryDate === 'string'
@@ -493,6 +494,8 @@ export class PropertiesService {
     if (dto.price !== undefined) updateData.range = dto.price;
     if (dto.commissionPct !== undefined)
       updateData.commission = dto.commissionPct;
+    if (dto.downPaymentAmount !== undefined)
+      updateData.downPaymentAmount = dto.downPaymentAmount;
     if (dto.status !== undefined) updateData.status = dto.status;
     if (dto.access !== undefined) updateData.access = dto.access;
     if (dto.utilitiesIncluded !== undefined)
@@ -642,6 +645,7 @@ export class PropertiesService {
       view: dto.view ?? null,
       range: dto.price ?? 0,
       commission: dto.commissionPct ?? 0,
+      downPaymentAmount: dto.downPaymentAmount ?? null,
       status:
         dto.status !== undefined
           ? this.ensureValidStatus(dto.status)

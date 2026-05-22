@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { BookingFeeModality, ReservationStatus, Role } from '@prisma/client';
+import { ReservationStatus, Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { EmailService, EmailContext } from '../notifications/email.service';
@@ -34,6 +34,7 @@ const DEFAULT_INCLUDE = {
       name: true,
       unitNumber: true,
       range: true,
+      downPaymentAmount: true,
       hasUtilities: true,
       type: { select: { name: true } },
       furnishing: { select: { name: true } },
@@ -161,11 +162,7 @@ export class ReservationsService {
     }
   }
 
-  private async resolvePropertyAndFee(
-    propertyId: number,
-    bookingFeeModality: BookingFeeModality,
-    paidBookingFeeInput: number,
-  ): Promise<{ property: any; paidBookingFee: number }> {
+  private async resolveProperty(propertyId: number): Promise<any> {
     const property = await this.prisma.property.findUnique({
       where: { id: propertyId },
     });
@@ -176,25 +173,7 @@ export class ReservationsService {
       ]);
     }
 
-    let paidBookingFee: number;
-
-    if (bookingFeeModality === BookingFeeModality.FULL) {
-      paidBookingFee = Number(property.range);
-    } else {
-      // PARTIAL: 0 < paidBookingFee < property.range
-      const rangeValue = Number(property.range);
-      if (paidBookingFeeInput <= 0 || paidBookingFeeInput >= rangeValue) {
-        throw AppValidationException.from(this.catalog, [
-          {
-            field: 'paidBookingFee',
-            code: 'RESERVATION_PAID_BOOKING_FEE_OUT_OF_RANGE',
-          },
-        ]);
-      }
-      paidBookingFee = paidBookingFeeInput;
-    }
-
-    return { property, paidBookingFee };
+    return property;
   }
 
   private async dispatchSubmitNotifications(
@@ -253,13 +232,9 @@ export class ReservationsService {
     currentUser: { id: number; role: Role },
   ) {
     this.validateIdField(dto.idType, dto.idNumber);
-    this.validateMoveInDate(dto.moveInDate);
+    if (dto.moveInDate) this.validateMoveInDate(dto.moveInDate);
 
-    const { property, paidBookingFee } = await this.resolvePropertyAndFee(
-      dto.propertyId,
-      dto.bookingFeeModality,
-      dto.paidBookingFee,
-    );
+    const property = await this.resolveProperty(dto.propertyId);
 
     const consultantId: number = currentUser.id;
 
@@ -284,13 +259,12 @@ export class ReservationsService {
           propertyId: dto.propertyId,
           contractPeriod: dto.contractPeriod,
           paymentModality: dto.paymentModality,
-          utilitiesIncluded: dto.utilitiesIncluded,
-          moveInDate: new Date(dto.moveInDate),
+          moveInDate: dto.moveInDate ? new Date(dto.moveInDate) : null,
           contractStartDate: new Date(dto.contractStartDate),
-          bookingFeeModality: dto.bookingFeeModality,
-          paidBookingFee,
+          sellingPrice: dto.sellingPrice,
+          downPaymentAmount: dto.downPaymentAmount ?? null,
+          reservationFeeAmount: dto.reservationFeeAmount,
           paymentMethod: dto.paymentMethod,
-          securityDeposit: dto.securityDeposit,
           paymentProofUrl,
           consultantId,
           clientSignatureUrl,
@@ -317,13 +291,9 @@ export class ReservationsService {
     const consultantId: number = link.generatedById;
 
     this.validateIdField(dto.idType, dto.idNumber);
-    this.validateMoveInDate(dto.moveInDate);
+    if (dto.moveInDate) this.validateMoveInDate(dto.moveInDate);
 
-    const { property, paidBookingFee } = await this.resolvePropertyAndFee(
-      propertyId,
-      dto.bookingFeeModality,
-      dto.paidBookingFee,
-    );
+    const property = await this.resolveProperty(propertyId);
 
     const clientSignatureUrl: string = files?.clientSignature?.[0]?.path ?? '';
     const consultantSignatureUrl: string = link.consultantSignatureUrl ?? '';
@@ -359,13 +329,12 @@ export class ReservationsService {
           propertyId,
           contractPeriod: dto.contractPeriod,
           paymentModality: dto.paymentModality,
-          utilitiesIncluded: dto.utilitiesIncluded,
-          moveInDate: new Date(dto.moveInDate),
+          moveInDate: dto.moveInDate ? new Date(dto.moveInDate) : null,
           contractStartDate: new Date(dto.contractStartDate),
-          bookingFeeModality: dto.bookingFeeModality,
-          paidBookingFee,
+          sellingPrice: dto.sellingPrice,
+          downPaymentAmount: dto.downPaymentAmount ?? null,
+          reservationFeeAmount: dto.reservationFeeAmount,
           paymentMethod: dto.paymentMethod,
-          securityDeposit: dto.securityDeposit,
           paymentProofUrl,
           consultantId,
           clientSignatureUrl,
@@ -633,29 +602,8 @@ export class ReservationsService {
     }
 
     // If move-in date is being updated, validate it
-    if (patch['moveInDate'] !== undefined) {
+    if (patch['moveInDate'] !== undefined && patch['moveInDate']) {
       this.validateMoveInDate(patch['moveInDate'] as string);
-    }
-
-    // If booking-fee fields are being updated, re-resolve and validate invariants
-    const feeFieldsTouched =
-      patch['propertyId'] !== undefined ||
-      patch['bookingFeeModality'] !== undefined ||
-      patch['paidBookingFee'] !== undefined;
-
-    if (feeFieldsTouched) {
-      const propertyId = (patch['propertyId'] ?? existing.propertyId) as number;
-      const modality = (patch['bookingFeeModality'] ??
-        existing.bookingFeeModality) as BookingFeeModality;
-      const paidFeeInput = (patch['paidBookingFee'] ??
-        Number(existing.paidBookingFee)) as number;
-
-      const { paidBookingFee } = await this.resolvePropertyAndFee(
-        propertyId,
-        modality,
-        paidFeeInput,
-      );
-      data['paidBookingFee'] = paidBookingFee;
     }
 
     // Replace file paths if new files are provided

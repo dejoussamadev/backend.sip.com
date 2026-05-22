@@ -13,10 +13,13 @@ export function mapReservationToResponse(reservation: any): any {
   const { property, consultant, createdBy, approvedBy, ...rest } = reservation;
   return {
     ...rest,
-    paidBookingFee: Number(rest.paidBookingFee),
+    sellingPrice: Number(rest.sellingPrice),
+    reservationFeeAmount: Number(rest.reservationFeeAmount),
+    downPaymentAmount: rest.downPaymentAmount != null ? Number(rest.downPaymentAmount) : null,
     propertyName: property.name,
     unitNumber: property.unitNumber ?? '',
     propertyRange: Number(property.range),
+    propertyDownPaymentAmount: property.downPaymentAmount != null ? Number(property.downPaymentAmount) : null,
     hasUtilities: property.hasUtilities,
     propertyType: property.type?.name ?? '',
     furnishing: property.furnishing?.name ?? '',
