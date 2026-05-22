@@ -93,4 +93,8 @@ export class SubmitReservationDto {
   @Equals(true, { message: 'You must accept the terms and conditions.' })
   @Transform(({ value }) => value === 'true' || value === true)
   termsAccepted: boolean;
+
+  @IsOptional()
+  @IsString()
+  unitNumber?: string;
 }

@@ -149,11 +149,13 @@ export class PropertiesService {
       ? Number(dto.furnishingId)
       : undefined;
 
+    const multipleUnits = dto.multipleUnits ?? false;
     const createData: any = {
       referenceNumber,
       name: dto.name,
       shortTerm: dto.shortTerm ?? false,
-      unitNumber: dto.unitNo ?? null,
+      multipleUnits,
+      unitNumber: multipleUnits ? null : (dto.unitNo ?? null),
       bathrooms: dto.bathrooms ?? 0,
       size: dto.sizeSqm ?? 0,
       maidRoom: dto.maidRoom ?? false,
@@ -486,6 +488,12 @@ export class PropertiesService {
     const updateData: any = {};
 
     if (dto.name) updateData.name = dto.name;
+    if (dto.multipleUnits !== undefined) {
+      updateData.multipleUnits = dto.multipleUnits;
+      updateData.unitNumber = dto.multipleUnits ? null : (dto.unitNo ?? null);
+    } else if (dto.unitNo !== undefined) {
+      updateData.unitNumber = dto.unitNo;
+    }
     if (dto.bathrooms !== undefined) updateData.bathrooms = dto.bathrooms;
     if (dto.sizeSqm !== undefined) updateData.size = dto.sizeSqm;
     if (dto.maidRoom !== undefined) updateData.maidRoom = dto.maidRoom;
@@ -633,11 +641,13 @@ export class PropertiesService {
       ? Number(dto.furnishingId)
       : undefined;
 
+    const multipleUnits = dto.multipleUnits ?? false;
     const updateData: any = {
       referenceNumber,
       name: dto.name,
       shortTerm: dto.shortTerm ?? false,
-      unitNumber: dto.unitNo ?? null,
+      multipleUnits,
+      unitNumber: multipleUnits ? null : (dto.unitNo ?? null),
       bathrooms: dto.bathrooms ?? 0,
       size: dto.sizeSqm ?? 0,
       maidRoom: dto.maidRoom ?? false,

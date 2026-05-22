@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ReservationStatus, Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
@@ -67,16 +67,25 @@ export class ReservationsService {
     propertyId: number,
     currentUser: { id: number; role: Role },
     consultantSignatureUrl: string,
+    unitNumber?: string,
   ) {
     const property = await this.prisma.property.findUnique({
       where: { id: propertyId },
-      select: { id: true, userId: true },
+      select: { id: true, userId: true, multipleUnits: true },
     });
 
     if (!property) {
       throw AppValidationException.from(this.catalog, [
         { field: 'propertyId', code: 'RESERVATION_PROPERTY_NOT_FOUND' },
       ]);
+    }
+
+    if (property.multipleUnits) {
+      if (!unitNumber?.trim()) {
+        throw new BadRequestException(
+          'unitNumber is required for multi-unit properties',
+        );
+      }
     }
 
     const baseUrl = this.config.get<string>('FRONTEND_URL');
@@ -98,6 +107,7 @@ export class ReservationsService {
             generatedById: currentUser.id,
             consultantSignatureUrl,
             expiresAt,
+            unitNumber: property.multipleUnits ? (unitNumber ?? null) : null,
           },
         });
         return { url: `${baseUrl}/reservation/${code}`, expiresAt };
@@ -121,7 +131,7 @@ export class ReservationsService {
     return {
       property: {
         name: property.name,
-        unitNumber: property.unitNumber,
+        unitNumber: link.unitNumber ?? property.unitNumber,
         type: { name: property.type?.name },
         furnishing: { name: property.furnishing?.name },
         hasUtilities: property.hasUtilities,
@@ -236,6 +246,18 @@ export class ReservationsService {
 
     const property = await this.resolveProperty(dto.propertyId);
 
+    let reservationUnitNumber: string | null;
+    if (property.multipleUnits) {
+      if (!dto.unitNumber?.trim()) {
+        throw new BadRequestException(
+          'unitNumber is required for multi-unit properties',
+        );
+      }
+      reservationUnitNumber = dto.unitNumber.trim();
+    } else {
+      reservationUnitNumber = property.unitNumber ?? null;
+    }
+
     const consultantId: number = currentUser.id;
 
     const clientSignatureUrl: string = files?.clientSignature?.[0]?.path ?? '';
@@ -257,6 +279,7 @@ export class ReservationsService {
           phone: dto.phone,
           countryCode: dto.countryCode,
           propertyId: dto.propertyId,
+          unitNumber: reservationUnitNumber,
           contractPeriod: dto.contractPeriod,
           paymentModality: dto.paymentModality,
           moveInDate: dto.moveInDate ? new Date(dto.moveInDate) : null,
@@ -327,6 +350,7 @@ export class ReservationsService {
           phone: dto.phone,
           countryCode: dto.countryCode,
           propertyId,
+          unitNumber: link.unitNumber ?? property.unitNumber ?? null,
           contractPeriod: dto.contractPeriod,
           paymentModality: dto.paymentModality,
           moveInDate: dto.moveInDate ? new Date(dto.moveInDate) : null,

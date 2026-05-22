@@ -45,6 +45,7 @@ export class ReservationsController {
       dto.propertyId,
       currentUser,
       signatureUrl,
+      dto.unitNumber,
     );
   }
 
