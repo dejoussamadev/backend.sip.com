@@ -326,6 +326,9 @@ async function seedProperties(ctx: {
                         max: 50,
                         fractionDigits: 2,
                     }),
+                    downPaymentAmount: faker.datatype.boolean(0.6)
+                        ? faker.number.float({min: 500, max: 5000, fractionDigits: 2})
+                        : null,
                     status: pickRandom(Object.values(PropertyStatus)),
                     expirationDate: faker.date.future(),
                     access: pickRandom(Object.values(PropertyAccess)),
