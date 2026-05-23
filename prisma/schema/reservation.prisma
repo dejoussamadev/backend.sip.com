@@ -32,6 +32,11 @@ enum ReservationStatus {
   CANCELLED
 }
 
+enum PaymentMode {
+  FULL
+  PARTIAL
+}
+
 model Reservation {
   id                     Int                   @id @default(autoincrement())
   reservationDate        DateTime
@@ -57,6 +62,8 @@ model Reservation {
   downPaymentPct         Decimal?              @db.Decimal(5, 2)
   commissionPct          Decimal?              @db.Decimal(5, 2)
   reservationFeeAmount   Decimal               @db.Decimal(15, 2)
+  paymentMode            PaymentMode?
+  paymentAmount          Decimal?              @db.Decimal(15, 2)
 
   paymentMethod          PaymentMethod
   paymentProofUrl        String?

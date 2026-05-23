@@ -1,6 +1,12 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { ReservationStatus, Role } from '@prisma/client';
+import { PaymentMode, ReservationStatus, Role } from '@prisma/client';
+import {
+  RENT_RESERVATION_FEE_PCT,
+  SALE_RESERVATION_FEE_PCT,
+  isRentCategory,
+  isSaleCategory,
+} from './constants/reservation-fees.constants';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { EmailService, EmailContext } from '../notifications/email.service';
@@ -39,6 +45,7 @@ const DEFAULT_INCLUDE = {
       hasUtilities: true,
       type: { select: { name: true } },
       furnishing: { select: { name: true } },
+      category: { select: { name: true } },
     },
   },
   consultant: {
@@ -154,6 +161,7 @@ export class ReservationsService {
         unitNumber: link.unitNumber ?? property.unitNumber,
         type: { name: property.type?.name },
         furnishing: { name: property.furnishing?.name },
+        category: property.category ? { name: property.category.name } : null,
         hasUtilities: property.hasUtilities,
         range: property.range,
         commissionPct:
@@ -199,6 +207,7 @@ export class ReservationsService {
   private async resolveProperty(propertyId: number): Promise<any> {
     const property = await this.prisma.property.findUnique({
       where: { id: propertyId },
+      include: { category: { select: { name: true } } },
     });
 
     if (!property) {
@@ -208,6 +217,87 @@ export class ReservationsService {
     }
 
     return property;
+  }
+
+  /**
+   * Server-side source of truth for reservation fee + payment-mode fields.
+   *
+   * Rent: paymentMode/paymentAmount are forced to null; fee = 50% of sellingPrice.
+   * Sale: paymentMode is required; PARTIAL amount must be in (0, sellingPrice];
+   *   FULL forces amount = sellingPrice; fee = 2% of the resolved amount.
+   */
+  private resolveReservationFinancials(
+    property: { category?: { name?: string } | null },
+    dto: {
+      sellingPrice: number;
+      paymentMode?: PaymentMode | null;
+      paymentAmount?: number | null;
+      reservationFeeAmount?: number;
+    },
+  ): {
+    paymentMode: PaymentMode | null;
+    paymentAmount: number | null;
+    reservationFeeAmount: number;
+  } {
+    const categoryName = property?.category?.name ?? null;
+    const sellingPrice = Number(dto.sellingPrice);
+    const roundMoney = (n: number) => Math.round(n * 100) / 100;
+
+    if (isRentCategory(categoryName)) {
+      return {
+        paymentMode: null,
+        paymentAmount: null,
+        reservationFeeAmount: roundMoney(
+          (sellingPrice * RENT_RESERVATION_FEE_PCT) / 100,
+        ),
+      };
+    }
+
+    if (isSaleCategory(categoryName)) {
+      const mode = dto.paymentMode ?? null;
+      if (mode !== PaymentMode.FULL && mode !== PaymentMode.PARTIAL) {
+        throw new BadRequestException(
+          'paymentMode is required for sale reservations',
+        );
+      }
+
+      let amount: number;
+      if (mode === PaymentMode.FULL) {
+        amount = sellingPrice;
+      } else {
+        const requested = Number(dto.paymentAmount);
+        if (
+          !Number.isFinite(requested) ||
+          requested <= 0 ||
+          requested > sellingPrice
+        ) {
+          throw AppValidationException.from(this.catalog, [
+            {
+              field: 'paymentAmount',
+              code: 'RESERVATION_PAID_BOOKING_FEE_OUT_OF_RANGE',
+            },
+          ]);
+        }
+        amount = requested;
+      }
+
+      return {
+        paymentMode: mode,
+        paymentAmount: roundMoney(amount),
+        reservationFeeAmount: roundMoney(
+          (amount * SALE_RESERVATION_FEE_PCT) / 100,
+        ),
+      };
+    }
+
+    // Category unknown — preserve previous behavior (trust the client) so we
+    // don't break legacy data while category remains free-form.
+    return {
+      paymentMode: dto.paymentMode ?? null,
+      paymentAmount:
+        dto.paymentAmount != null ? Number(dto.paymentAmount) : null,
+      reservationFeeAmount: Number(dto.reservationFeeAmount ?? 0),
+    };
   }
 
   private async dispatchSubmitNotifications(
@@ -290,6 +380,8 @@ export class ReservationsService {
     const paymentProofUrl: string | null =
       files?.paymentProof?.[0]?.path ?? null;
 
+    const financials = this.resolveReservationFinancials(property, dto);
+
     const reservation = await this.prisma.$transaction(async (tx) =>
       tx.reservation.create({
         data: {
@@ -314,7 +406,9 @@ export class ReservationsService {
           // at submit time (form does not expose it to the agent/buyer).
           commissionPct:
             property.commission != null ? Number(property.commission) : null,
-          reservationFeeAmount: dto.reservationFeeAmount,
+          reservationFeeAmount: financials.reservationFeeAmount,
+          paymentMode: financials.paymentMode,
+          paymentAmount: financials.paymentAmount,
           paymentMethod: dto.paymentMethod,
           paymentProofUrl,
           consultantId,
@@ -350,6 +444,8 @@ export class ReservationsService {
     const consultantSignatureUrl: string = link.consultantSignatureUrl ?? '';
     const paymentProofUrl: string | null =
       files?.paymentProof?.[0]?.path ?? null;
+
+    const financials = this.resolveReservationFinancials(property, dto);
 
     const reservation = await this.prisma.$transaction(async (tx) => {
       // Re-check consumedAt inside the transaction to prevent a race condition
@@ -388,7 +484,9 @@ export class ReservationsService {
             link.downPaymentPct != null ? Number(link.downPaymentPct) : null,
           commissionPct:
             link.commissionPct != null ? Number(link.commissionPct) : null,
-          reservationFeeAmount: dto.reservationFeeAmount,
+          reservationFeeAmount: financials.reservationFeeAmount,
+          paymentMode: financials.paymentMode,
+          paymentAmount: financials.paymentAmount,
           paymentMethod: dto.paymentMethod,
           paymentProofUrl,
           consultantId,
