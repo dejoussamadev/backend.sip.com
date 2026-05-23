@@ -6,9 +6,12 @@ import {
   ParseIntPipe,
   Patch,
   Query,
+  Sse,
   UseGuards,
 } from '@nestjs/common';
+import { Observable } from 'rxjs';
 import { NotificationsService } from './notifications.service';
+import { NotificationsStreamService } from './notifications-stream.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -20,7 +23,21 @@ import { NotificationFilter } from './dto/get-notifications.dto';
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(Role.ADMIN, Role.AGENT)
 export class NotificationsController {
-  constructor(private readonly notificationsService: NotificationsService) {}
+  constructor(
+    private readonly notificationsService: NotificationsService,
+    private readonly notificationsStream: NotificationsStreamService,
+  ) {}
+
+  // Server-Sent Events stream — replaces the prior WebSocket gateway.
+  // Same-origin via Vercel rewrite in prod, so the access_token cookie
+  // flows without SameSite=None.
+  @Sse('stream')
+  stream(
+    @CurrentUser('id') userId: number,
+    @CurrentUser('role') role: Role,
+  ): Observable<MessageEvent> {
+    return this.notificationsStream.subscribe(userId, role);
+  }
 
   @Get()
   findAll(

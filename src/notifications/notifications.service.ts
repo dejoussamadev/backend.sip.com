@@ -3,7 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { NotificationType, Role } from '@prisma/client';
 import { NotificationFilter } from './dto/get-notifications.dto';
 import { EmailService, EmailContext } from './email.service';
-import { NotificationsGateway } from './notifications.gateway';
+import { NotificationsStreamService } from './notifications-stream.service';
 import { normalizePagination } from '../common/utils/pagination.util';
 import {
   LOGIN_REQUEST_APPROVED,
@@ -32,7 +32,7 @@ export class NotificationsService {
   constructor(
     private prisma: PrismaService,
     private emailService: EmailService,
-    private notificationsGateway: NotificationsGateway,
+    private notificationsStream: NotificationsStreamService,
   ) {}
 
   async notify(params: {
@@ -88,12 +88,12 @@ export class NotificationsService {
     this.logger.log(`Notification: [${type}] ${message}`);
 
     if (sendToAdmins) {
-      this.notificationsGateway.sendToAdmins(notification);
+      this.notificationsStream.publishToAdmins(notification);
     }
 
     for (const user of extraRecipients) {
       if (!sendToAdmins || user.role !== Role.ADMIN) {
-        this.notificationsGateway.sendToUser(user.id, notification);
+        this.notificationsStream.publishToUser(user.id, notification);
       }
     }
 
