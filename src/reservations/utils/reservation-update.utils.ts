@@ -22,6 +22,8 @@ const UPDATABLE_RESERVATION_FIELDS = [
   'downPaymentPct',
   'commissionPct',
   'reservationFeeAmount',
+  'paymentMode',
+  'paymentAmount',
   'paymentMethod',
 ] as const;
 

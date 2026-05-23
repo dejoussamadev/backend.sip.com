@@ -16,6 +16,7 @@ import { Transform, Type } from 'class-transformer';
 import {
   ContractPeriod,
   PaymentMethod,
+  PaymentMode,
   PaymentModality,
   ReservationIdType,
 } from '@prisma/client';
@@ -95,6 +96,16 @@ export class SubmitReservationDto {
   @Min(0)
   @Type(() => Number)
   reservationFeeAmount: number;
+
+  @IsOptional()
+  @IsEnum(PaymentMode)
+  paymentMode?: PaymentMode;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Type(() => Number)
+  paymentAmount?: number;
 
   @IsEnum(PaymentMethod)
   paymentMethod: PaymentMethod;

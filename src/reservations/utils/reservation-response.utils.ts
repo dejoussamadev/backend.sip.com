@@ -15,6 +15,8 @@ export function mapReservationToResponse(reservation: any): any {
     ...rest,
     sellingPrice: Number(rest.sellingPrice),
     reservationFeeAmount: Number(rest.reservationFeeAmount),
+    paymentAmount:
+      rest.paymentAmount != null ? Number(rest.paymentAmount) : null,
     downPaymentPct:
       rest.downPaymentPct != null ? Number(rest.downPaymentPct) : null,
     commissionPct:
@@ -22,6 +24,7 @@ export function mapReservationToResponse(reservation: any): any {
     propertyName: property.name,
     unitNumber: reservation.unitNumber ?? property.unitNumber ?? '',
     propertyRange: Number(property.range),
+    propertyCategory: property.category?.name ?? null,
     propertyDownPaymentPct:
       property.downPaymentPct != null ? Number(property.downPaymentPct) : null,
     propertyCommissionPct:

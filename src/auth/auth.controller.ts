@@ -4,6 +4,9 @@ import {
   Body,
   Get,
   UseGuards,
+  UnauthorizedException,
+  UsePipes,
+  ValidationPipe,
   HttpCode,
   HttpStatus,
   Req,
@@ -16,6 +19,20 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { CurrentUser } from './decorators/current-user.decorator';
 import type { Request, Response } from 'express';
 import type { StringValue } from 'ms';
+
+/**
+ * Login-specific validation pipe. Any DTO validation failure (empty email,
+ * empty password, invalid email format, short password, missing fingerprint)
+ * is surfaced as the same 401 "Email or password is incorrect" response that
+ * the auth service throws for unknown user / wrong password. This avoids
+ * leaking which fields are missing and matches the credential-error UX.
+ */
+const LOGIN_VALIDATION_PIPE = new ValidationPipe({
+  whitelist: true,
+  transform: true,
+  exceptionFactory: () =>
+    new UnauthorizedException('Email or password is incorrect'),
+});
 
 const JWT_EXPIRATION = (process.env.JWT_EXPIRATION || '1d') as StringValue;
 
@@ -69,6 +86,7 @@ export class AuthController {
   @Post('login')
   @Throttle({ default: { limit: 20, ttl: 60000 } })
   @HttpCode(HttpStatus.OK)
+  @UsePipes(LOGIN_VALIDATION_PIPE)
   async login(
     @Body() loginDto: LoginDto,
     @Req() request: Request,

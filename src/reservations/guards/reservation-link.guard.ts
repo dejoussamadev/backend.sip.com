@@ -37,6 +37,7 @@ export class ReservationLinkGuard implements CanActivate {
             hasUtilities: true,
             type: { select: { id: true, name: true } },
             furnishing: { select: { id: true, name: true } },
+            category: { select: { id: true, name: true } },
           },
         },
         generatedBy: { select: { name: true, agentCode: true } },
