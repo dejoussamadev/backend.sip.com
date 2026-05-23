@@ -35,14 +35,24 @@ export class NotificationsService {
     private notificationsStream: NotificationsStreamService,
   ) {}
 
+  /**
+   * Dispatch a notification (DB row + WebSocket publish + optional email).
+   *
+   * Channels per recipient:
+   *  - `admins` / `userIds` → DB notification + WebSocket publish + email.
+   *  - `emailOnlyUserIds`   → email only (no DB row, no WebSocket publish).
+   *  - `actorUserId`        → always excluded from every channel.
+   */
   async notify(params: {
     type: NotificationType;
     message: string;
     entityId?: number;
     emailContext?: EmailContext;
+    actorUserId?: number;
     recipients?: {
       admins?: boolean;
       userIds?: number[];
+      emailOnlyUserIds?: number[];
     };
   }) {
     const {
@@ -50,22 +60,36 @@ export class NotificationsService {
       message,
       entityId,
       emailContext,
-      recipients = { admins: true, userIds: [] },
+      actorUserId,
+      recipients = { admins: true, userIds: [], emailOnlyUserIds: [] },
     } = params;
     const sendToAdmins = recipients.admins ?? true;
-    const recipientUserIds = recipients.userIds ?? [];
+    const recipientUserIds = (recipients.userIds ?? []).filter(
+      (id) => id !== actorUserId,
+    );
+    const emailOnlyUserIds = (recipients.emailOnlyUserIds ?? []).filter(
+      (id) => id !== actorUserId,
+    );
 
-    const admins = sendToAdmins
+    const adminsRaw = sendToAdmins
       ? await this.prisma.user.findMany({
           where: { role: Role.ADMIN, isActive: true },
           select: { id: true, email: true },
         })
       : [];
+    const admins = adminsRaw.filter((a) => a.id !== actorUserId);
 
     const extraRecipients = recipientUserIds.length
       ? await this.prisma.user.findMany({
           where: { id: { in: recipientUserIds }, isActive: true },
           select: { id: true, email: true, role: true },
+        })
+      : [];
+
+    const emailOnlyRecipients = emailOnlyUserIds.length
+      ? await this.prisma.user.findMany({
+          where: { id: { in: emailOnlyUserIds }, isActive: true },
+          select: { id: true, email: true },
         })
       : [];
 
@@ -87,8 +111,14 @@ export class NotificationsService {
     });
     this.logger.log(`Notification: [${type}] ${message}`);
 
-    if (sendToAdmins) {
-      this.notificationsStream.publishToAdmins(notification);
+    if (sendToAdmins && admins.length > 0) {
+      // publishToAdmins fan-outs to every admin connection; the actor
+      // filter at DB-write time prevents an unwanted row, but the WS
+      // event would still reach the actor's own socket. Publish per
+      // admin explicitly to honor actor exclusion in real-time too.
+      for (const admin of admins) {
+        this.notificationsStream.publishToUser(admin.id, notification);
+      }
     }
 
     for (const user of extraRecipients) {
@@ -102,6 +132,9 @@ export class NotificationsService {
       if (admin.email) emails.add(admin.email);
     }
     for (const user of extraRecipients) {
+      if (user.email) emails.add(user.email);
+    }
+    for (const user of emailOnlyRecipients) {
       if (user.email) emails.add(user.email);
     }
 
@@ -147,7 +180,9 @@ export class NotificationsService {
         take: pagination.limit,
       }),
       this.prisma.notificationRecipient.count({ where }),
-      this.prisma.notificationRecipient.count({ where: { ...where, isRead: false } }),
+      this.prisma.notificationRecipient.count({
+        where: { ...where, isRead: false },
+      }),
     ]);
 
     const data = rows.map(({ notification, isRead, readAt }) => ({
@@ -174,7 +209,13 @@ export class NotificationsService {
     page = '1',
     limit = '20',
   ) {
-    return this.findAll(userId, NotificationFilter.PROPERTY, unreadOnly, page, limit);
+    return this.findAll(
+      userId,
+      NotificationFilter.PROPERTY,
+      unreadOnly,
+      page,
+      limit,
+    );
   }
 
   async findAgentNotifications(
@@ -183,7 +224,13 @@ export class NotificationsService {
     page = '1',
     limit = '20',
   ) {
-    return this.findAll(userId, NotificationFilter.AGENT, unreadOnly, page, limit);
+    return this.findAll(
+      userId,
+      NotificationFilter.AGENT,
+      unreadOnly,
+      page,
+      limit,
+    );
   }
 
   async markAsRead(userId: number, notificationId: number) {
@@ -221,7 +268,9 @@ export class NotificationsService {
 
   async countUnread(userId: number) {
     const [total, properties, agents] = await Promise.all([
-      this.prisma.notificationRecipient.count({ where: { userId, isRead: false } }),
+      this.prisma.notificationRecipient.count({
+        where: { userId, isRead: false },
+      }),
       this.prisma.notificationRecipient.count({
         where: {
           userId,
