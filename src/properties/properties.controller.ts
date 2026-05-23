@@ -174,8 +174,9 @@ export class PropertiesController {
     @Req() req: Request,
   ) {
     this.applyUploadedFiles(dto, files);
-    const agentName = (req.user as any)?.name ?? 'Unknown';
-    return this.propertiesService.update(id, dto, agentName);
+    const user = req.user as { id?: number; name?: string } | undefined;
+    const agentName = user?.name ?? 'Unknown';
+    return this.propertiesService.update(id, dto, agentName, user?.id);
   }
 
   @Put(':id')
