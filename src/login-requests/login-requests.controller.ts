@@ -1,4 +1,5 @@
 import {
+  Body,
   Controller,
   Get,
   Param,
@@ -12,6 +13,7 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
+import { ApproveLoginRequestDto } from './dto/approve-login-request.dto';
 import { LoginRequestQueryDto } from './dto/login-request-query.dto';
 import { LoginRequestsService } from './login-requests.service';
 
@@ -39,8 +41,12 @@ export class LoginRequestsController {
 
   @Patch(':id/approve')
   @Roles(Role.ADMIN)
-  approve(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: any) {
-    return this.loginRequestsService.approve(id, user.id);
+  approve(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: ApproveLoginRequestDto,
+    @CurrentUser() user: any,
+  ) {
+    return this.loginRequestsService.approve(id, user.id, dto.deviceName);
   }
 
   @Patch(':id/reject')

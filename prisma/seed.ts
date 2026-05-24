@@ -315,7 +315,12 @@ async function seedProperties(ctx: {
           bathrooms: faker.number.int({ min: 1, max: 5 }),
           size: faker.number.float({ min: 30, max: 500, fractionDigits: 2 }),
           maidRoom: faker.datatype.boolean(),
-          balcony: faker.helpers.arrayElement(['Yes', 'No', 'Large', 'Small']),
+          balcony: faker.helpers.arrayElement([
+            'balcony_available',
+            'terrace_available',
+            'balcony_and_terrace',
+            'none',
+          ]),
           view: pickRandom(Object.values(PropertyView)),
           range: faker.number.float({
             min: 1000,

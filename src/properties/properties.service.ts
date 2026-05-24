@@ -471,6 +471,7 @@ export class PropertiesService {
     id: number,
     dto: UpdatePropertyDto,
     agentName: string = 'Unknown',
+    actorUserId?: number,
   ) {
     const current = await this.findOne(id);
     const category = dto.category ?? (current as any).category?.name;
@@ -606,6 +607,7 @@ export class PropertiesService {
         propertyName: (updated as any).name,
         agentName,
       },
+      actorUserId,
       recipients: {
         admins: true,
         userIds: (current as any).userId ? [(current as any).userId] : [],
