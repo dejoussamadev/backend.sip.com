@@ -114,7 +114,7 @@ export class LoginRequestsService {
     return loginRequest;
   }
 
-  async approve(id: number, reviewerId: number) {
+  async approve(id: number, reviewerId: number, deviceName: string) {
     const loginRequest = await this.findOne(id);
 
     if (loginRequest.status !== LoginRequestStatus.PENDING) {
@@ -140,7 +140,7 @@ export class LoginRequestsService {
         create: {
           userId: loginRequest.userId,
           fingerprint: loginRequest.fingerprint,
-          deviceName: loginRequest.deviceName,
+          deviceName,
           browser: loginRequest.browser,
           operatingSystem: loginRequest.operatingSystem,
           platform: loginRequest.platform,
@@ -149,7 +149,7 @@ export class LoginRequestsService {
           lastUsedAt: now,
         },
         update: {
-          deviceName: loginRequest.deviceName,
+          deviceName,
           browser: loginRequest.browser,
           operatingSystem: loginRequest.operatingSystem,
           platform: loginRequest.platform,
@@ -164,6 +164,7 @@ export class LoginRequestsService {
           status: LoginRequestStatus.APPROVED,
           reviewedById: reviewerId,
           reviewedAt: now,
+          deviceName,
         },
       }),
     ]);
@@ -176,15 +177,19 @@ export class LoginRequestsService {
         userEmail: loginRequest.user.email,
         reviewerName: reviewer.name,
         fingerprint: loginRequest.fingerprint,
-        deviceName: loginRequest.deviceName ?? undefined,
+        deviceName,
         browser: loginRequest.browser ?? undefined,
         operatingSystem: loginRequest.operatingSystem ?? undefined,
         platform: loginRequest.platform ?? undefined,
         ipAddress: loginRequest.ipAddress,
       },
+      // The reviewer triggered the action, so they are excluded everywhere.
+      // The requesting user can't see in-app notifications yet (their device
+      // isn't trusted), so they only get an email.
+      actorUserId: reviewerId,
       recipients: {
         admins: true,
-        userIds: [loginRequest.userId],
+        emailOnlyUserIds: [loginRequest.userId],
       },
     });
 
@@ -229,9 +234,12 @@ export class LoginRequestsService {
         platform: loginRequest.platform ?? undefined,
         ipAddress: loginRequest.ipAddress,
       },
+      // Reviewer is excluded; requesting user only gets an email (no in-app
+      // notification, since they're not currently logged in).
+      actorUserId: reviewerId,
       recipients: {
         admins: true,
-        userIds: [loginRequest.userId],
+        emailOnlyUserIds: [loginRequest.userId],
       },
     });
 
