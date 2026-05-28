@@ -1,11 +1,17 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { PaymentMode, ReservationStatus, Role } from '@prisma/client';
+import {
+  CategoryKind,
+  PaymentMode,
+  PaymentModality,
+  ReservationStatus,
+  Role,
+} from '@prisma/client';
 import {
   RENT_RESERVATION_FEE_PCT,
   SALE_RESERVATION_FEE_PCT,
-  isRentCategory,
-  isSaleCategory,
+  isRentKind,
+  isSaleKind,
 } from './constants/reservation-fees.constants';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -45,7 +51,7 @@ const DEFAULT_INCLUDE = {
       hasUtilities: true,
       type: { select: { name: true } },
       furnishing: { select: { name: true } },
-      category: { select: { name: true } },
+      category: { select: { name: true, kind: true } },
     },
   },
   consultant: {
@@ -161,7 +167,9 @@ export class ReservationsService {
         unitNumber: link.unitNumber ?? property.unitNumber,
         type: { name: property.type?.name },
         furnishing: { name: property.furnishing?.name },
-        category: property.category ? { name: property.category.name } : null,
+        category: property.category
+          ? { name: property.category.name, kind: property.category.kind }
+          : null,
         hasUtilities: property.hasUtilities,
         range: property.range,
         commissionPct:
@@ -207,7 +215,7 @@ export class ReservationsService {
   private async resolveProperty(propertyId: number): Promise<any> {
     const property = await this.prisma.property.findUnique({
       where: { id: propertyId },
-      include: { category: { select: { name: true } } },
+      include: { category: { select: { name: true, kind: true } } },
     });
 
     if (!property) {
@@ -220,73 +228,107 @@ export class ReservationsService {
   }
 
   /**
+   * Shared Full/Partial resolution for SALE and RENT — only the fee percentage
+   * differs. FULL locks amount to sellingPrice; PARTIAL validates that amount
+   * is in (0, sellingPrice]. Returns paymentMode, paymentAmount, and fee.
+   */
+  private resolveSaleOrRentFinancials(
+    sellingPrice: number,
+    dto: { paymentMode?: PaymentMode | null; paymentAmount?: number | null },
+    feePct: number,
+  ): {
+    paymentMode: PaymentMode;
+    paymentAmount: number;
+    reservationFeeAmount: number;
+  } {
+    const roundMoney = (n: number) => Math.round(n * 100) / 100;
+    const mode = dto.paymentMode ?? null;
+    if (mode !== PaymentMode.FULL && mode !== PaymentMode.PARTIAL) {
+      throw new BadRequestException('paymentMode is required');
+    }
+
+    let amount: number;
+    if (mode === PaymentMode.FULL) {
+      amount = sellingPrice;
+    } else {
+      const requested = Number(dto.paymentAmount);
+      if (
+        !Number.isFinite(requested) ||
+        requested <= 0 ||
+        requested > sellingPrice
+      ) {
+        throw AppValidationException.from(this.catalog, [
+          {
+            field: 'paymentAmount',
+            code: 'RESERVATION_PAID_BOOKING_FEE_OUT_OF_RANGE',
+          },
+        ]);
+      }
+      amount = requested;
+    }
+
+    return {
+      paymentMode: mode,
+      paymentAmount: roundMoney(amount),
+      reservationFeeAmount: roundMoney((amount * feePct) / 100),
+    };
+  }
+
+  /**
    * Server-side source of truth for reservation fee + payment-mode fields.
    *
-   * Rent: paymentMode/paymentAmount are forced to null; fee = 50% of sellingPrice.
-   * Sale: paymentMode is required; PARTIAL amount must be in (0, sellingPrice];
-   *   FULL forces amount = sellingPrice; fee = 2% of the resolved amount.
+   * Rent:  paymentMode required (FULL/PARTIAL); fee = 50% of resolved amount.
+   *        paymentModality and downPaymentPct are always null (rent-only).
+   * Sale:  paymentMode required; paymentModality required; fee = 2% of resolved amount.
+   * Unknown kind: trusts the client payload (legacy compatibility).
    */
   private resolveReservationFinancials(
-    property: { category?: { name?: string } | null },
+    property: { category?: { kind?: CategoryKind } | null },
     dto: {
       sellingPrice: number;
       paymentMode?: PaymentMode | null;
       paymentAmount?: number | null;
       reservationFeeAmount?: number;
+      paymentModality?: PaymentModality | null;
+      downPaymentPct?: number | null;
     },
   ): {
     paymentMode: PaymentMode | null;
     paymentAmount: number | null;
     reservationFeeAmount: number;
+    paymentModality: PaymentModality | null;
+    downPaymentPct: number | null;
   } {
-    const categoryName = property?.category?.name ?? null;
+    const categoryKind = property?.category?.kind ?? null;
     const sellingPrice = Number(dto.sellingPrice);
-    const roundMoney = (n: number) => Math.round(n * 100) / 100;
 
-    if (isRentCategory(categoryName)) {
-      return {
-        paymentMode: null,
-        paymentAmount: null,
-        reservationFeeAmount: roundMoney(
-          (sellingPrice * RENT_RESERVATION_FEE_PCT) / 100,
-        ),
-      };
+    if (isRentKind(categoryKind)) {
+      const resolved = this.resolveSaleOrRentFinancials(
+        sellingPrice,
+        dto,
+        RENT_RESERVATION_FEE_PCT,
+      );
+      return { ...resolved, paymentModality: null, downPaymentPct: null };
     }
 
-    if (isSaleCategory(categoryName)) {
-      const mode = dto.paymentMode ?? null;
-      if (mode !== PaymentMode.FULL && mode !== PaymentMode.PARTIAL) {
-        throw new BadRequestException(
-          'paymentMode is required for sale reservations',
-        );
+    if (isSaleKind(categoryKind)) {
+      if (!dto.paymentModality) {
+        throw AppValidationException.from(this.catalog, [
+          {
+            field: 'paymentModality',
+            code: 'RESERVATION_PAYMENT_MODALITY_REQUIRED_FOR_SALE',
+          },
+        ]);
       }
-
-      let amount: number;
-      if (mode === PaymentMode.FULL) {
-        amount = sellingPrice;
-      } else {
-        const requested = Number(dto.paymentAmount);
-        if (
-          !Number.isFinite(requested) ||
-          requested <= 0 ||
-          requested > sellingPrice
-        ) {
-          throw AppValidationException.from(this.catalog, [
-            {
-              field: 'paymentAmount',
-              code: 'RESERVATION_PAID_BOOKING_FEE_OUT_OF_RANGE',
-            },
-          ]);
-        }
-        amount = requested;
-      }
-
+      const resolved = this.resolveSaleOrRentFinancials(
+        sellingPrice,
+        dto,
+        SALE_RESERVATION_FEE_PCT,
+      );
       return {
-        paymentMode: mode,
-        paymentAmount: roundMoney(amount),
-        reservationFeeAmount: roundMoney(
-          (amount * SALE_RESERVATION_FEE_PCT) / 100,
-        ),
+        ...resolved,
+        paymentModality: dto.paymentModality,
+        downPaymentPct: dto.downPaymentPct ?? null,
       };
     }
 
@@ -297,6 +339,8 @@ export class ReservationsService {
       paymentAmount:
         dto.paymentAmount != null ? Number(dto.paymentAmount) : null,
       reservationFeeAmount: Number(dto.reservationFeeAmount ?? 0),
+      paymentModality: dto.paymentModality ?? null,
+      downPaymentPct: dto.downPaymentPct ?? null,
     };
   }
 
@@ -397,11 +441,11 @@ export class ReservationsService {
           propertyId: dto.propertyId,
           unitNumber: reservationUnitNumber,
           contractPeriod: dto.contractPeriod,
-          paymentModality: dto.paymentModality,
+          paymentModality: financials.paymentModality,
           moveInDate: dto.moveInDate ? new Date(dto.moveInDate) : null,
           contractStartDate: new Date(dto.contractStartDate),
           sellingPrice: dto.sellingPrice,
-          downPaymentPct: dto.downPaymentPct ?? null,
+          downPaymentPct: financials.downPaymentPct,
           // Commission is the agent's earning — copied from the property
           // at submit time (form does not expose it to the agent/buyer).
           commissionPct:
@@ -445,7 +489,11 @@ export class ReservationsService {
     const paymentProofUrl: string | null =
       files?.paymentProof?.[0]?.path ?? null;
 
-    const financials = this.resolveReservationFinancials(property, dto);
+    const financials = this.resolveReservationFinancials(property, {
+      ...dto,
+      downPaymentPct:
+        link.downPaymentPct != null ? Number(link.downPaymentPct) : null,
+    });
 
     const reservation = await this.prisma.$transaction(async (tx) => {
       // Re-check consumedAt inside the transaction to prevent a race condition
@@ -476,12 +524,11 @@ export class ReservationsService {
           propertyId,
           unitNumber: link.unitNumber ?? property.unitNumber ?? null,
           contractPeriod: dto.contractPeriod,
-          paymentModality: dto.paymentModality,
+          paymentModality: financials.paymentModality,
           moveInDate: dto.moveInDate ? new Date(dto.moveInDate) : null,
           contractStartDate: new Date(dto.contractStartDate),
           sellingPrice: dto.sellingPrice,
-          downPaymentPct:
-            link.downPaymentPct != null ? Number(link.downPaymentPct) : null,
+          downPaymentPct: financials.downPaymentPct,
           commissionPct:
             link.commissionPct != null ? Number(link.commissionPct) : null,
           reservationFeeAmount: financials.reservationFeeAmount,

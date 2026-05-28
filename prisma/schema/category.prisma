@@ -1,6 +1,14 @@
+enum CategoryKind {
+  SALE
+  RENT
+}
+
 model Category {
-  id   Int    @id @default(autoincrement())
-  name String @unique
+  id   Int          @id @default(autoincrement())
+  name String       @unique
+  /// Drives sale-vs-rent business rules (reservation fees, payment modes, UI badges).
+  /// Locked at creation — admins can rename the category but not change its kind.
+  kind CategoryKind
 
   properties  Property[]
   furnishings CategoryFurnishing[]
