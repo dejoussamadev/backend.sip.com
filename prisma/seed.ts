@@ -419,11 +419,14 @@ async function main(): Promise<void> {
 
   await seedTypeLayoutRelations(typeMap, layoutMap);
 
-  const { records: categoryRecords, map: categoryMap } = await seedMany(
-    'categories',
-    CATEGORIES,
-    (name) => prisma.category.create({ data: { name } }),
+  console.log('  → Seeding categories...');
+  const categoryRecords: NamedRecord[] = await Promise.all(
+    CATEGORIES.map(({ name, kind }) =>
+      prisma.category.create({ data: { name, kind } }),
+    ),
   );
+  const categoryMap = toNameMap(categoryRecords);
+  console.log(`  ✓ ${categoryRecords.length} categories`);
 
   await seedCategoryTypeRelations(categoryMap, typeMap);
   await seedCategoryFurnishingRelations(categoryRecords, furnishingRecords);

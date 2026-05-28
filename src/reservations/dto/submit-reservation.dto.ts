@@ -63,8 +63,9 @@ export class SubmitReservationDto {
   @IsEnum(ContractPeriod)
   contractPeriod: ContractPeriod;
 
+  @IsOptional()
   @IsEnum(PaymentModality)
-  paymentModality: PaymentModality;
+  paymentModality?: PaymentModality | null;
 
   @IsOptional()
   @IsDateString()
