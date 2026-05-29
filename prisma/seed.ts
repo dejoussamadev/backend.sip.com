@@ -4,6 +4,7 @@ import {
   PropertyAccess,
   PropertyView,
   Role,
+  CategoryKind,
 } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { faker } from '@faker-js/faker';
@@ -32,6 +33,8 @@ const prisma = new PrismaClient();
 // ─────────────────────────────────────────────────────────────────────────────
 
 type NamedRecord = { id: number; name: string };
+/** Extended record for categories — carries `kind` to enable SALE/RENT gating. */
+type CategoryRecord = NamedRecord & { kind: CategoryKind };
 type NameMap<T extends NamedRecord> = Record<string, T>;
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -276,7 +279,7 @@ async function seedLandlords(imageAssets: SeedAssets): Promise<NamedRecord[]> {
 }
 
 async function seedProperties(ctx: {
-  categoryRecords: NamedRecord[];
+  categoryRecords: CategoryRecord[];
   typeMap: NameMap<NamedRecord>;
   layoutMap: NameMap<NamedRecord>;
   furnishingRecords: NamedRecord[];
@@ -332,9 +335,11 @@ async function seedProperties(ctx: {
             max: 50,
             fractionDigits: 2,
           }),
-          downPaymentPct: faker.datatype.boolean(0.6)
-            ? faker.number.float({ min: 5, max: 50, fractionDigits: 2 })
-            : null,
+          // Down payment is a SALE-only concept; RENT properties always get null.
+          downPaymentPct:
+            randomCategory.kind === CategoryKind.SALE
+              ? faker.number.float({ min: 5, max: 50, fractionDigits: 2 })
+              : null,
           status: pickRandom(Object.values(PropertyStatus)),
           expirationDate: faker.date.future(),
           access: pickRandom(Object.values(PropertyAccess)),
@@ -420,9 +425,10 @@ async function main(): Promise<void> {
   await seedTypeLayoutRelations(typeMap, layoutMap);
 
   console.log('  → Seeding categories...');
-  const categoryRecords: NamedRecord[] = await Promise.all(
+  // Typed as CategoryRecord so `kind` is available for SALE/RENT gating below.
+  const categoryRecords: CategoryRecord[] = await Promise.all(
     CATEGORIES.map(({ name, kind }) =>
-      prisma.category.create({ data: { name, kind } }),
+      prisma.category.create({ data: { name, kind } }).then((r) => ({ ...r, kind })),
     ),
   );
   const categoryMap = toNameMap(categoryRecords);
