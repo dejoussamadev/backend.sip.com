@@ -789,6 +789,12 @@ export class ReservationsService {
       ]);
     }
 
+    if (existing.status !== ReservationStatus.PENDING_APPROVAL) {
+      throw AppValidationException.from(this.catalog, [
+        { field: 'status', code: 'RESERVATION_NOT_EDITABLE' },
+      ]);
+    }
+
     // PartialType/OmitType produces an opaque mapped type; cast to access fields.
     const patch = dto as Record<string, unknown>;
 

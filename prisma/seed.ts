@@ -428,7 +428,9 @@ async function main(): Promise<void> {
   // Typed as CategoryRecord so `kind` is available for SALE/RENT gating below.
   const categoryRecords: CategoryRecord[] = await Promise.all(
     CATEGORIES.map(({ name, kind }) =>
-      prisma.category.create({ data: { name, kind } }).then((r) => ({ ...r, kind })),
+      prisma.category
+        .create({ data: { name, kind } })
+        .then((r) => ({ ...r, kind })),
     ),
   );
   const categoryMap = toNameMap(categoryRecords);
