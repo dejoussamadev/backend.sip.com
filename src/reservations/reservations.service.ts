@@ -230,7 +230,8 @@ export class ReservationsService {
   /**
    * Shared Full/Partial resolution for SALE and RENT — only the fee percentage
    * differs. FULL locks amount to sellingPrice; PARTIAL validates that amount
-   * is in (0, sellingPrice]. Returns paymentMode, paymentAmount, and fee.
+   * is in (0, sellingPrice]. The reservation fee is always a percentage of the
+   * full sellingPrice, regardless of payment mode.
    */
   private resolveSaleOrRentFinancials(
     sellingPrice: number,
@@ -270,16 +271,16 @@ export class ReservationsService {
     return {
       paymentMode: mode,
       paymentAmount: roundMoney(amount),
-      reservationFeeAmount: roundMoney((amount * feePct) / 100),
+      reservationFeeAmount: roundMoney((sellingPrice * feePct) / 100),
     };
   }
 
   /**
    * Server-side source of truth for reservation fee + payment-mode fields.
    *
-   * Rent:  paymentMode required (FULL/PARTIAL); fee = 50% of resolved amount.
+   * Rent:  paymentMode required (FULL/PARTIAL); fee = 50% of sellingPrice.
    *        paymentModality and downPaymentPct are always null (rent-only).
-   * Sale:  paymentMode required; paymentModality required; fee = 2% of resolved amount.
+   * Sale:  paymentMode required; paymentModality required; fee = 2% of sellingPrice.
    * Unknown kind: trusts the client payload (legacy compatibility).
    */
   private resolveReservationFinancials(
