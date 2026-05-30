@@ -1,10 +1,12 @@
 export const PROPERTY_SEED_COUNT = 120;
 
-export const CATEGORIES = [
-  'Commercial Leasing',
-  'Commercial Sales',
-  'Residential Leasing',
-  'Residential Sales',
+import { CategoryKind } from '@prisma/client';
+
+export const CATEGORIES: { name: string; kind: CategoryKind }[] = [
+  { name: 'Commercial Leasing', kind: CategoryKind.RENT },
+  { name: 'Commercial Sales', kind: CategoryKind.SALE },
+  { name: 'Residential Leasing', kind: CategoryKind.RENT },
+  { name: 'Residential Sales', kind: CategoryKind.SALE },
 ];
 
 export const TYPES = [

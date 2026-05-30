@@ -54,7 +54,7 @@ model Reservation {
   unitNumber             String?
 
   contractPeriod         ContractPeriod
-  paymentModality        PaymentModality
+  paymentModality        PaymentModality?
   moveInDate             DateTime?
   contractStartDate      DateTime
 

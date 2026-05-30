@@ -25,6 +25,7 @@ export function mapReservationToResponse(reservation: any): any {
     unitNumber: reservation.unitNumber ?? property.unitNumber ?? '',
     propertyRange: Number(property.range),
     propertyCategory: property.category?.name ?? null,
+    propertyCategoryKind: property.category?.kind ?? null,
     propertyDownPaymentPct:
       property.downPaymentPct != null ? Number(property.downPaymentPct) : null,
     propertyCommissionPct:

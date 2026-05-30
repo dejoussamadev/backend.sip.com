@@ -39,6 +39,12 @@ PROPERTY_ADDRESS_STRING: "Address must be text."
 PROPERTY_TYPE_INVALID_FOR_CATEGORY: "The selected property type isn't valid for the chosen category. Please choose a different type."
 PROPERTY_LAYOUT_INVALID_FOR_TYPE: "The selected layout isn't valid for the chosen property type. Please choose a different layout."
 
+# Settings taxonomy — relation validation
+SETTINGS_CATEGORY_NOT_FOUND: "One or more of the selected categories do not exist."
+SETTINGS_TYPE_NOT_FOUND: "One or more of the selected types do not exist."
+SETTINGS_LAYOUT_NOT_FOUND: "One or more of the selected layouts do not exist."
+SETTINGS_FURNISHING_NOT_FOUND: "One or more of the selected furnishings do not exist."
+
 # Generic fallbacks
 GENERIC_VALIDATION_FAILED: "Some fields are invalid. Please review the form and try again."
 GENERIC_BAD_REQUEST: "The request couldn't be processed. Please try again."
@@ -50,8 +56,10 @@ RESERVATION_LINK_USED: "This reservation link has already been used."
 RESERVATION_ID_NUMBER_INVALID: "ID number must be exactly 11 digits."
 RESERVATION_PASSPORT_INVALID: "Passport number must be 6–12 alphanumeric characters."
 RESERVATION_PAID_BOOKING_FEE_OUT_OF_RANGE: "Paid booking fee must be greater than 0 and less than the property price."
+RESERVATION_PAYMENT_MODALITY_REQUIRED_FOR_SALE: "Payment modality is required for sale reservations."
 RESERVATION_MOVE_IN_DATE_PAST: "Move-in date must be today or later."
 RESERVATION_NOT_PENDING: "Only pending reservations can be approved or rejected."
+RESERVATION_NOT_EDITABLE: "Only pending reservations can be edited."
 RESERVATION_LINK_ALREADY_CONSUMED: "This reservation link was already used by another submission."
 RESERVATION_NOT_FOUND: "Reservation not found."
 RESERVATION_ACCESS_DENIED: "You do not have access to this reservation."
