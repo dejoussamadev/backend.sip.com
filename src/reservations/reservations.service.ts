@@ -289,6 +289,7 @@ export class ReservationsService {
       paymentMode?: PaymentMode | null;
       paymentAmount?: number | null;
       reservationFeeAmount?: number;
+      reservationFeePct?: number | null;
       paymentModality?: PaymentModality | null;
       downPaymentPct?: number | null;
     },
@@ -306,7 +307,7 @@ export class ReservationsService {
       const resolved = this.resolveSaleOrRentFinancials(
         sellingPrice,
         dto,
-        RENT_RESERVATION_FEE_PCT,
+        dto.reservationFeePct ?? RENT_RESERVATION_FEE_PCT,
       );
       return { ...resolved, paymentModality: null, downPaymentPct: null };
     }
@@ -323,7 +324,7 @@ export class ReservationsService {
       const resolved = this.resolveSaleOrRentFinancials(
         sellingPrice,
         dto,
-        SALE_RESERVATION_FEE_PCT,
+        dto.reservationFeePct ?? SALE_RESERVATION_FEE_PCT,
       );
       return {
         ...resolved,
@@ -785,6 +786,12 @@ export class ReservationsService {
     if (!existing) {
       throw AppValidationException.from(this.catalog, [
         { code: 'RESERVATION_NOT_FOUND' },
+      ]);
+    }
+
+    if (existing.status !== ReservationStatus.PENDING_APPROVAL) {
+      throw AppValidationException.from(this.catalog, [
+        { field: 'status', code: 'RESERVATION_NOT_EDITABLE' },
       ]);
     }
 
