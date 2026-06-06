@@ -6,7 +6,6 @@ import {
   LOGIN_REQUEST_CREATED,
   LOGIN_REQUEST_REJECTED,
 } from './notification-types';
-import { EMAIL_LOGO_BASE64 } from './email-logo';
 
 export interface EmailContext {
   referenceNumber?: string;
@@ -78,8 +77,7 @@ function wrapLayout(subject: string, body: string): string {
           <!-- Header -->
           <tr>
             <td style="background-color:#1E4DCC;padding:24px 32px;text-align:center;">
-              <img src="cid:logo@stepinproperty" alt="Step In Property" width="60" height="60" style="display:inline-block;width:60px;height:60px;">
-              <p style="margin:8px 0 0;font-size:18px;font-weight:700;color:#FFFFFF;letter-spacing:0.5px;">STEP IN PROPERTY</p>
+              <p style="margin:0;font-size:22px;font-weight:700;color:#FFFFFF;letter-spacing:1px;">STEP IN PROPERTY</p>
             </td>
           </tr>
 
@@ -524,17 +522,8 @@ export class EmailService {
     const html = wrapLayout(template.subject, bodyHtml);
     const text = template.buildText(context);
 
-    const attachments = [{
-      filename: 'logo.png',
-      content: Buffer.from(EMAIL_LOGO_BASE64, 'base64'),
-      encoding: 'base64' as const,
-      contentType: 'image/png',
-      contentDisposition: 'inline' as const,
-      cid: 'logo@stepinproperty',
-    }];
-
     try {
-      const info = await this.transporter.sendMail({ from, to, subject: template.subject, html, text, attachments });
+      const info = await this.transporter.sendMail({ from, to, subject: template.subject, html, text });
       this.logger.log(`[${templateKey}] email sent to: ${to.join(', ')} (${info.messageId})`);
     } catch (error) {
       this.logger.error(`Failed to send [${templateKey}] email`, error as Error);
