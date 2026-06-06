@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { Logger } from '@nestjs/common';
 import cookieParser from 'cookie-parser';
+import helmet from 'helmet';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
@@ -13,7 +14,7 @@ async function bootstrap() {
   // hop, which matters for upload URL building and rate-limit accounting.
   app.getHttpAdapter().getInstance().set('trust proxy', 1);
 
-  // ✅ Cookie parser for httpOnly JWT cookies
+  app.use(helmet());
   app.use(cookieParser());
 
   // ✅ CORS pour le frontend Angular
