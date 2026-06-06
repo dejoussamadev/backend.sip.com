@@ -34,7 +34,7 @@ const LOGIN_VALIDATION_PIPE = new ValidationPipe({
     new UnauthorizedException('Email or password is incorrect'),
 });
 
-const JWT_EXPIRATION = (process.env.JWT_EXPIRATION || '1d') as StringValue;
+const JWT_EXPIRATION = (process.env.JWT_EXPIRATION || '7d') as StringValue;
 
 /** Converts a duration string like '7d', '1h', '30m' to milliseconds. */
 function parseExpirationToMs(expiration: string): number {

@@ -28,9 +28,4 @@ export class ErrorCatalogService implements OnModuleInit {
   getMessage(code: string, fallbackCode = 'GENERIC_BAD_REQUEST'): string {
     return this.catalog[code] ?? this.catalog[fallbackCode] ?? code;
   }
-
-  /** Returns the full catalog map — used by the public `/errors/catalog` endpoint. */
-  getAll(): Record<string, string> {
-    return { ...this.catalog };
-  }
 }
