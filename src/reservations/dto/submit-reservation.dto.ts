@@ -98,12 +98,11 @@ export class SubmitReservationDto {
   @Type(() => Number)
   reservationFeeAmount: number;
 
-  @IsOptional()
   @IsNumber()
   @Min(0)
   @Max(100)
   @Type(() => Number)
-  reservationFeePct?: number;
+  reservationFeePct: number;
 
   @IsOptional()
   @IsEnum(PaymentMode)
