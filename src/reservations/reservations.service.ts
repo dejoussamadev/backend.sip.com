@@ -7,12 +7,7 @@ import {
   ReservationStatus,
   Role,
 } from '@prisma/client';
-import {
-  RENT_RESERVATION_FEE_PCT,
-  SALE_RESERVATION_FEE_PCT,
-  isRentKind,
-  isSaleKind,
-} from './constants/reservation-fees.constants';
+import { isRentKind, isSaleKind } from './constants/reservation-fees.constants';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { EmailService, EmailContext } from '../notifications/email.service';
@@ -228,15 +223,18 @@ export class ReservationsService {
   }
 
   /**
-   * Shared Full/Partial resolution for SALE and RENT — only the fee percentage
-   * differs. FULL locks amount to sellingPrice; PARTIAL validates that amount
-   * is in (0, sellingPrice]. The reservation fee is always a percentage of the
-   * full sellingPrice, regardless of payment mode.
+   * Shared Full/Partial resolution for SALE and RENT. FULL locks amount to
+   * sellingPrice; PARTIAL validates that amount is in (0, sellingPrice]. The
+   * reservation fee is entered manually by the agent and submitted as a computed
+   * amount, so it is trusted and stored as-is (rounded for consistency).
    */
   private resolveSaleOrRentFinancials(
     sellingPrice: number,
-    dto: { paymentMode?: PaymentMode | null; paymentAmount?: number | null },
-    feePct: number,
+    dto: {
+      paymentMode?: PaymentMode | null;
+      paymentAmount?: number | null;
+      reservationFeeAmount?: number;
+    },
   ): {
     paymentMode: PaymentMode;
     paymentAmount: number;
@@ -271,16 +269,16 @@ export class ReservationsService {
     return {
       paymentMode: mode,
       paymentAmount: roundMoney(amount),
-      reservationFeeAmount: roundMoney((sellingPrice * feePct) / 100),
+      reservationFeeAmount: roundMoney(Number(dto.reservationFeeAmount ?? 0)),
     };
   }
 
   /**
    * Server-side source of truth for reservation fee + payment-mode fields.
    *
-   * Rent:  paymentMode required (FULL/PARTIAL); fee = 50% of sellingPrice.
+   * Rent:  paymentMode required (FULL/PARTIAL); fee taken from the submitted amount.
    *        paymentModality and downPaymentPct are always null (rent-only).
-   * Sale:  paymentMode required; paymentModality required; fee = 2% of sellingPrice.
+   * Sale:  paymentMode required; paymentModality required; fee from submitted amount.
    * Unknown kind: trusts the client payload (legacy compatibility).
    */
   private resolveReservationFinancials(
@@ -305,11 +303,7 @@ export class ReservationsService {
     const sellingPrice = Number(dto.sellingPrice);
 
     if (isRentKind(categoryKind)) {
-      const resolved = this.resolveSaleOrRentFinancials(
-        sellingPrice,
-        dto,
-        dto.reservationFeePct ?? RENT_RESERVATION_FEE_PCT,
-      );
+      const resolved = this.resolveSaleOrRentFinancials(sellingPrice, dto);
       return { ...resolved, paymentModality: null, downPaymentPct: null };
     }
 
@@ -322,11 +316,7 @@ export class ReservationsService {
           },
         ]);
       }
-      const resolved = this.resolveSaleOrRentFinancials(
-        sellingPrice,
-        dto,
-        dto.reservationFeePct ?? SALE_RESERVATION_FEE_PCT,
-      );
+      const resolved = this.resolveSaleOrRentFinancials(sellingPrice, dto);
       return {
         ...resolved,
         paymentModality: dto.paymentModality,
