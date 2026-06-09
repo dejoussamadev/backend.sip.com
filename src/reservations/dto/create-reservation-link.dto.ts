@@ -31,4 +31,10 @@ export class CreateReservationLinkDto {
   @Max(100)
   @Type(() => Number)
   downPaymentPct?: number;
+
+  @IsNumber()
+  @Min(0)
+  @Max(100)
+  @Type(() => Number)
+  reservationFeePct: number;
 }
