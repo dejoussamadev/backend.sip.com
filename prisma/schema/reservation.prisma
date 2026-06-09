@@ -109,6 +109,7 @@ model ReservationLink {
   unitNumber             String?
   commissionPct          Decimal?     @db.Decimal(5, 2)
   downPaymentPct         Decimal?     @db.Decimal(5, 2)
+  reservationFeePct      Decimal?     @db.Decimal(5, 2)
   consultantSignatureUrl String
   expiresAt              DateTime
   consumedAt             DateTime?

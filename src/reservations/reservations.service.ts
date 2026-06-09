@@ -79,6 +79,7 @@ export class ReservationsService {
     unitNumber?: string,
     commissionPct?: number,
     downPaymentPct?: number,
+    reservationFeePct?: number,
   ) {
     const property = await this.prisma.property.findUnique({
       where: { id: propertyId },
@@ -136,6 +137,7 @@ export class ReservationsService {
             unitNumber: property.multipleUnits ? (unitNumber ?? null) : null,
             commissionPct: resolvedCommissionPct,
             downPaymentPct: resolvedDownPaymentPct,
+            reservationFeePct: reservationFeePct ?? null,
           },
         });
         return { url: `${baseUrl}/reservation/${code}`, expiresAt };
@@ -171,6 +173,8 @@ export class ReservationsService {
           link.commissionPct != null ? Number(link.commissionPct) : null,
         downPaymentPct:
           link.downPaymentPct != null ? Number(link.downPaymentPct) : null,
+        reservationFeePct:
+          link.reservationFeePct != null ? Number(link.reservationFeePct) : null,
       },
       consultant: {
         name: link.generatedBy?.name,
@@ -481,10 +485,18 @@ export class ReservationsService {
     const paymentProofUrl: string | null =
       files?.paymentProof?.[0]?.path ?? null;
 
+    // Server-side override: derive the fee amount from the link's stored fee %
+    // rather than trusting the client-submitted value (defense-in-depth).
+    const linkFeePct =
+      link.reservationFeePct != null ? Number(link.reservationFeePct) : null;
     const financials = this.resolveReservationFinancials(property, {
       ...dto,
       downPaymentPct:
         link.downPaymentPct != null ? Number(link.downPaymentPct) : null,
+      reservationFeeAmount:
+        linkFeePct != null
+          ? Math.round((dto.sellingPrice * linkFeePct / 100) * 100) / 100
+          : Number(dto.reservationFeeAmount ?? 0),
     });
 
     const reservation = await this.prisma.$transaction(async (tx) => {

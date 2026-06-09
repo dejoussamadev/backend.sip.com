@@ -6,4 +6,5 @@ export class SubmitPublicReservationDto extends OmitType(SubmitReservationDto, [
   'commissionPct',
   'downPaymentPct',
   'unitNumber',
+  'reservationFeePct',
 ] as const) {}

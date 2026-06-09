@@ -48,6 +48,7 @@ export class ReservationsController {
       dto.unitNumber,
       dto.commissionPct,
       dto.downPaymentPct,
+      dto.reservationFeePct,
     );
   }
 
