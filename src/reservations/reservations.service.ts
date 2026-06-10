@@ -11,6 +11,8 @@ import { isRentKind, isSaleKind } from './constants/reservation-fees.constants';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { EmailService, EmailContext } from '../notifications/email.service';
+import { ReservationPdfService } from './reservation-pdf.service';
+import type * as nodemailer from 'nodemailer';
 import { ErrorCatalogService } from '../common/errors/error-catalog.service';
 import { AppValidationException } from '../common/errors/app-validation.exception';
 import { normalizePagination } from '../common/utils/pagination.util';
@@ -64,6 +66,7 @@ export class ReservationsService {
     private readonly prisma: PrismaService,
     private readonly notificationsService: NotificationsService,
     private readonly emailService: EmailService,
+    private readonly reservationPdfService: ReservationPdfService,
     private readonly catalog: ErrorCatalogService,
     private readonly config: ConfigService,
   ) {}
@@ -354,6 +357,25 @@ export class ReservationsService {
       reservationDate: new Date(reservation.reservationDate).toISOString(),
     };
 
+    // Generate the reservation PDF up front so it can ride along with the
+    // client confirmation email. A failure here must never block the email,
+    // so it's caught and the email simply goes out without the attachment.
+    let pdfAttachment: nodemailer.SendMailOptions['attachments'] | undefined;
+    try {
+      const pdf = await this.reservationPdfService.generate(reservation, property);
+      pdfAttachment = [
+        {
+          filename: `reservation-${reservation.id}.pdf`,
+          content: pdf,
+          contentType: 'application/pdf',
+        },
+      ];
+    } catch (error) {
+      this.logger.error(
+        `Reservation PDF generation failed for #${reservation.id}: ${error}`,
+      );
+    }
+
     const results = await Promise.allSettled([
       this.notificationsService.notify({
         type: RESERVATION_SUBMITTED,
@@ -374,6 +396,7 @@ export class ReservationsService {
           propertyName: property.name,
           propertyRef: property.referenceNumber,
         },
+        pdfAttachment,
       ),
     ]);
 
