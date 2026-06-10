@@ -5,11 +5,12 @@ import { ErrorsModule } from '../common/errors/errors.module';
 import { ReservationsController } from './reservations.controller';
 import { ReservationsPublicController } from './reservations-public.controller';
 import { ReservationsService } from './reservations.service';
+import { ReservationPdfService } from './reservation-pdf.service';
 import { ReservationLinkGuard } from './guards/reservation-link.guard';
 
 @Module({
   imports: [PrismaModule, NotificationsModule, ErrorsModule],
   controllers: [ReservationsController, ReservationsPublicController],
-  providers: [ReservationsService, ReservationLinkGuard],
+  providers: [ReservationsService, ReservationPdfService, ReservationLinkGuard],
 })
 export class ReservationsModule {}
