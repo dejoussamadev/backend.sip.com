@@ -495,11 +495,21 @@ export class EmailService {
   }
 
   /** Sends an email using a registered template key. */
-  async sendEmail(templateKey: string, recipients: string[], context: EmailContext) {
-    await this.dispatch(templateKey, recipients, context);
+  async sendEmail(
+    templateKey: string,
+    recipients: string[],
+    context: EmailContext,
+    attachments?: nodemailer.SendMailOptions['attachments'],
+  ) {
+    await this.dispatch(templateKey, recipients, context, attachments);
   }
 
-  private async dispatch(templateKey: string, recipients: string[], context: EmailContext) {
+  private async dispatch(
+    templateKey: string,
+    recipients: string[],
+    context: EmailContext,
+    attachments?: nodemailer.SendMailOptions['attachments'],
+  ) {
     if (!this.transporter) {
       this.logger.warn('Transporter not configured, email not sent');
       return;
@@ -523,7 +533,7 @@ export class EmailService {
     const text = template.buildText(context);
 
     try {
-      const info = await this.transporter.sendMail({ from, to, subject: template.subject, html, text });
+      const info = await this.transporter.sendMail({ from, to, subject: template.subject, html, text, attachments });
       this.logger.log(`[${templateKey}] email sent to: ${to.join(', ')} (${info.messageId})`);
     } catch (error) {
       this.logger.error(`Failed to send [${templateKey}] email`, error as Error);
