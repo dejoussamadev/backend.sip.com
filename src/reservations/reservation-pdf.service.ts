@@ -1,6 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import PDFDocument from 'pdfkit';
 
+/** English Terms & Conditions text (must stay in sync with the frontend terms-step fallback). */
+const TERMS_EN =
+  `TERMS & CONDITIONS\n\n` +
+  `The BOOKING FEE / AGENCY FEE is non-refundable in case the client fails to finalize the contract signing due to any reason not caused by STEP IN or the LANDLORD.\n\n` +
+  `The BOOKING FORM is a formality to explicitly prove our client's commitment to booking a unit; however, the official booking can only be formalized upon the LANDLORD's APPROVAL of the client and deal details.\n\n` +
+  `Dear valued clients, to confirm your booking(s) kindly send us a picture of the reservation to this number: +974 3113 9246 / +974 3003 7813.\n\n` +
+  `In case STEP IN PROPERTY does NOT receive a copy of the signed reservation, the booking will not be considered official, and the company will not hold any responsibilities.`;
+
 function fmt(value: unknown): string {
   if (value === null || value === undefined || value === '') return '—';
   return String(value);
@@ -147,22 +155,38 @@ export class ReservationPdfService {
       fieldRow('Payment Amount', fmtMoney(reservation.paymentAmount));
       fieldRow('Payment Method', fmt(reservation.paymentMethod));
 
-      // ── Footer ───────────────────────────────────────────────
-      const pageHeight = doc.page.height;
+      // ── Section 5: Terms & Conditions ────────────────────────
+      sectionHeading('Terms & Conditions');
+
       doc
-        .moveTo(50, pageHeight - 60)
-        .lineTo(545, pageHeight - 60)
+        .font('Helvetica')
+        .fontSize(9)
+        .fillColor('#333333')
+        .text(TERMS_EN, { lineGap: 2 });
+      doc.moveDown(0.8);
+
+      // Acceptance confirmation
+      doc.font('Helvetica').fontSize(10).fillColor('#222222');
+      const accepted = reservation.termsAcceptedAt
+        ? `Yes — accepted on ${fmtDate(reservation.termsAcceptedAt)}`
+        : 'Not accepted';
+      fieldRow('Terms Accepted', accepted);
+
+      // ── Footer ───────────────────────────────────────────────
+      doc.moveDown(1);
+      doc
+        .moveTo(50, doc.y)
+        .lineTo(545, doc.y)
         .strokeColor('#cccccc')
         .stroke();
+      doc.moveDown(0.5);
       doc
         .font('Helvetica')
         .fontSize(8)
         .fillColor('#aaaaaa')
         .text(
           `Step In Property  |  Generated on: ${new Date().toLocaleString('en-GB')}`,
-          50,
-          pageHeight - 48,
-          { align: 'center', width: 495 },
+          { align: 'center' },
         );
 
       doc.end();

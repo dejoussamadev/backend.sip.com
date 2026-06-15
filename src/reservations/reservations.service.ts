@@ -701,6 +701,9 @@ export class ReservationsService {
       propertyName: reservation.property?.name,
     };
 
+    // Consultant email from the updated record (DEFAULT_INCLUDE fetches it)
+    const consultantEmail: string | undefined = (updated as any).consultant?.email;
+
     const results = await Promise.allSettled([
       this.notificationsService.notify({
         type: RESERVATION_APPROVED,
@@ -712,11 +715,22 @@ export class ReservationsService {
           userIds: [reservation.consultantId, reservation.createdById],
         },
       }),
+      // Email to client (no PDF — it was sent in the creation email)
       this.emailService.sendEmail(
         'RESERVATION_APPROVED_CLIENT',
         [reservation.email],
         emailCtx,
       ),
+      // Email to the consultant/agent (reuse internal template, no PDF)
+      ...(consultantEmail
+        ? [
+            this.emailService.sendEmail(
+              'RESERVATION_APPROVED_INTERNAL',
+              [consultantEmail],
+              emailCtx,
+            ),
+          ]
+        : []),
     ]);
 
     for (const result of results) {
@@ -771,6 +785,9 @@ export class ReservationsService {
       rejectionReason: reason,
     };
 
+    // Consultant email from the updated record (DEFAULT_INCLUDE fetches it)
+    const consultantEmail: string | undefined = (updated as any).consultant?.email;
+
     const results = await Promise.allSettled([
       this.notificationsService.notify({
         type: RESERVATION_REJECTED,
@@ -782,11 +799,22 @@ export class ReservationsService {
           userIds: [reservation.consultantId, reservation.createdById],
         },
       }),
+      // Email to client (no PDF — it was sent in the creation email)
       this.emailService.sendEmail(
         'RESERVATION_REJECTED_CLIENT',
         [reservation.email],
         emailCtx,
       ),
+      // Email to the consultant/agent (reuse internal template, no PDF)
+      ...(consultantEmail
+        ? [
+            this.emailService.sendEmail(
+              'RESERVATION_REJECTED_INTERNAL',
+              [consultantEmail],
+              emailCtx,
+            ),
+          ]
+        : []),
     ]);
 
     for (const result of results) {
