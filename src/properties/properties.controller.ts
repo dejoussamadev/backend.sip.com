@@ -67,7 +67,7 @@ export class PropertiesController {
       // Les users ne peuvent pas forcer le statut
       delete dto.status;
     }
-    return this.propertiesService.create(dto, agentName, userRole);
+    return this.propertiesService.create(dto, agentName, userRole, user?.id);
   }
 
   @Get()
@@ -193,14 +193,16 @@ export class PropertiesController {
     @Req() req: Request,
   ) {
     this.applyUploadedFiles(dto, files);
-    const agentName = (req.user as any)?.name ?? 'Unknown';
-    return this.propertiesService.replace(id, dto, agentName);
+    const user = req.user as any;
+    const agentName = user?.name ?? 'Unknown';
+    return this.propertiesService.replace(id, dto, agentName, user?.id);
   }
 
   @Delete(':id')
   @Roles(Role.ADMIN)
   remove(@Param('id', ParseIntPipe) id: number, @Req() req: Request) {
-    const agentName = (req.user as any)?.name ?? 'Unknown';
-    return this.propertiesService.remove(id, agentName);
+    const user = req.user as any;
+    const agentName = user?.name ?? 'Unknown';
+    return this.propertiesService.remove(id, agentName, user?.id);
   }
 }

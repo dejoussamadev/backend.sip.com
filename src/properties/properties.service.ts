@@ -114,10 +114,38 @@ export class PropertiesService {
     return mapped;
   }
 
+  /**
+   * Checks whether the agent has reached their property limit.
+   * A null onlinePropertyLimit means unlimited.
+   * Counts all non-deleted properties (excludes TRASH and ARCHIVED).
+   */
+  private async enforceAgentPropertyLimit(agentId: number): Promise<void> {
+    const agent = await this.prisma.user.findUnique({
+      where: { id: agentId },
+      select: { onlinePropertyLimit: true },
+    });
+
+    if (!agent || agent.onlinePropertyLimit === null) return;
+
+    const activePropertyCount = await this.prisma.property.count({
+      where: {
+        userId: agentId,
+        status: { notIn: [PropertyStatus.TRASH, PropertyStatus.ARCHIVED] },
+      },
+    });
+
+    if (activePropertyCount >= agent.onlinePropertyLimit) {
+      throw AppValidationException.from(this.catalog, [
+        { field: 'agentId', code: 'AGENT_PROPERTY_LIMIT_REACHED' },
+      ]);
+    }
+  }
+
   async create(
     dto: CreatePropertyDto,
     agentName: string = 'Unknown',
     userRole?: Role,
+    actorUserId?: number,
   ) {
     if (dto.category && dto.type) {
       this.validateDependencies(dto.category, dto.type, dto.layout);
@@ -125,6 +153,12 @@ export class PropertiesService {
     this.normalizeRules(dto);
 
     const isAdmin = userRole === Role.ADMIN;
+
+    // Enforce per-agent property limit (null = unlimited, admins are unrestricted)
+    if (!isAdmin && dto.agentId) {
+      await this.enforceAgentPropertyLimit(Number(dto.agentId));
+    }
+
     const resolvedStatus =
       isAdmin && dto.status !== undefined
         ? this.ensureValidStatus(dto.status)
@@ -238,6 +272,7 @@ export class PropertiesService {
         price: Number(property.range),
         status: property.status,
       },
+      actorUserId,
       recipients: {
         admins: true,
         userIds: userId ? [userId] : [],
@@ -621,6 +656,7 @@ export class PropertiesService {
     id: number,
     dto: CreatePropertyDto,
     agentName: string = 'Unknown',
+    actorUserId?: number,
   ) {
     const current = await this.findOne(id);
 
@@ -737,6 +773,7 @@ export class PropertiesService {
         propertyName: (updated as any).name,
         agentName,
       },
+      actorUserId,
       recipients: {
         admins: true,
         userIds: (current as any).userId ? [(current as any).userId] : [],
@@ -746,7 +783,7 @@ export class PropertiesService {
     return updated;
   }
 
-  async remove(id: number, agentName: string = 'Unknown') {
+  async remove(id: number, agentName: string = 'Unknown', actorUserId?: number) {
     const property = await this.findOne(id);
     await this.prisma.property.delete({ where: { id } });
 
@@ -767,6 +804,7 @@ export class PropertiesService {
         propertyName: (property as any).name,
         agentName,
       },
+      actorUserId,
       recipients: {
         admins: true,
         userIds: (property as any).userId ? [(property as any).userId] : [],
