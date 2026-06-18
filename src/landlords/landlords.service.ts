@@ -19,9 +19,9 @@ export class LandlordsService {
   // Créer un landlord
   async create(dto: CreateLandlordDto) {
     const { expiryDate, marketingAgreement, draftContract, ...rest } = dto;
-    if (!marketingAgreement || !draftContract) {
+    if (!marketingAgreement) {
       throw new BadRequestException(
-        'Les fichiers marketingAgreement et draftContract sont requis',
+        'Le fichier marketingAgreement est requis',
       );
     }
 
@@ -29,7 +29,7 @@ export class LandlordsService {
       data: {
         ...rest,
         marketingAgreement,
-        draftContract,
+        draftContract: draftContract ?? null,
         expiryDate: new Date(expiryDate),
       },
     });

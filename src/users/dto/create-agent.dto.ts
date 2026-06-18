@@ -8,6 +8,7 @@ import {
   IsInt,
   IsBoolean,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 import { Role } from '@prisma/client';
 
 export class CreateAgentDto {
@@ -43,13 +44,17 @@ export class CreateAgentDto {
   @IsOptional()
   photo?: string;
 
+  /** Coerce string → number so @IsInt() passes when frontend sends "50" */
+  @Type(() => Number)
   @IsInt()
   @IsOptional()
   bookmarkLimit?: number = 50;
 
+  /** Coerce string → number so @IsInt() passes when frontend sends "1" */
+  @Type(() => Number)
   @IsInt()
   @IsOptional()
-  onlinePropertyLimit?: number = 0;
+  onlinePropertyLimit?: number | null;
 
   @IsEnum(Role)
   @IsOptional()

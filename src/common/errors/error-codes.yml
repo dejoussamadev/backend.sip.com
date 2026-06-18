@@ -45,6 +45,9 @@ SETTINGS_TYPE_NOT_FOUND: "One or more of the selected types do not exist."
 SETTINGS_LAYOUT_NOT_FOUND: "One or more of the selected layouts do not exist."
 SETTINGS_FURNISHING_NOT_FOUND: "One or more of the selected furnishings do not exist."
 
+# Agent — limit enforcement
+AGENT_PROPERTY_LIMIT_REACHED: "You have reached your property limit. Please contact an admin to increase it."
+
 # Generic fallbacks
 GENERIC_VALIDATION_FAILED: "Some fields are invalid. Please review the form and try again."
 GENERIC_BAD_REQUEST: "The request couldn't be processed. Please try again."
