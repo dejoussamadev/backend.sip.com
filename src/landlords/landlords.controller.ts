@@ -104,36 +104,30 @@ export class LandlordsController {
     @Body() createLandlordDto: CreateLandlordDto,
     @Req() req: Request,
   ) {
-    // Vérifier que les fichiers sont présents
+    // Vérifier que le fichier marketing agreement est présent
     if (!files?.marketingAgreement?.[0]) {
       throw new BadRequestException('Le fichier marketingAgreement est requis');
-    }
-    if (!files?.draftContract?.[0]) {
-      throw new BadRequestException('Le fichier draftContract est requis');
     }
 
     const baseUrl = `${req.protocol}://${req.get('host')}`;
 
     try {
-      // Utiliser UploadService pour générer les URLs
       const marketingUrl = this.uploadService.getUrl(
         files.marketingAgreement[0],
         baseUrl,
       );
-      const draftUrl = this.uploadService.getUrl(
-        files.draftContract[0],
-        baseUrl,
-      );
+      const draftUrl = files?.draftContract?.[0]
+        ? this.uploadService.getUrl(files.draftContract[0], baseUrl)
+        : undefined;
       const photoUrl = files?.photo?.[0]
         ? this.uploadService.getUrl(files.photo[0], baseUrl)
         : undefined;
 
-      // Créer l'objet avec les données + URLs des fichiers
       const landlordData: CreateLandlordDto = {
         ...createLandlordDto,
         ...(photoUrl ? { photo: photoUrl } : {}),
         marketingAgreement: marketingUrl,
-        draftContract: draftUrl,
+        ...(draftUrl ? { draftContract: draftUrl } : {}),
       };
 
       // Créer le landlord (le service convertira expiryDate en Date)
@@ -149,7 +143,7 @@ export class LandlordsController {
       this.uploadService.rollback([
         ...(files?.photo?.[0] ? [files.photo[0]] : []),
         files.marketingAgreement[0],
-        files.draftContract[0],
+        ...(files?.draftContract?.[0] ? [files.draftContract[0]] : []),
       ]);
       throw error;
     }

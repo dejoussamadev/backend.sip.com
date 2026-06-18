@@ -44,8 +44,8 @@ export class CreateLandlordDto {
   note?: string;
 
   @IsString()
-  @IsNotEmpty({ message: 'Le lien map est requis' })
-  mapLink: string;
+  @IsOptional()
+  mapLink?: string;
 
   // Ces champs seront remplis après l'upload
   @IsString()

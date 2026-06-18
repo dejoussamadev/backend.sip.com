@@ -31,8 +31,11 @@ export class UsersController {
   @Post()
   @Roles(Role.ADMIN)
   @HttpCode(HttpStatus.CREATED)
-  create(@Body() createAgentDto: CreateAgentDto) {
-    return this.usersService.create(createAgentDto);
+  create(
+    @Body() createAgentDto: CreateAgentDto,
+    @CurrentUser('id') actorId: number,
+  ) {
+    return this.usersService.create(createAgentDto, actorId);
   }
 
   // Get all users with optional name and role filters.
@@ -91,8 +94,9 @@ export class UsersController {
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateAgentDto: UpdateAgentDto,
+    @CurrentUser('id') actorId: number,
   ) {
-    return this.usersService.update(id, updateAgentDto);
+    return this.usersService.update(id, updateAgentDto, actorId);
   }
 
   // Toggle a user's active status by id as an admin.
@@ -107,10 +111,12 @@ export class UsersController {
   @Roles(Role.ADMIN)
   remove(
     @Param('id', ParseIntPipe) id: number,
+    @CurrentUser('id') actorId: number,
     @Query('reassignToAgentId') reassignToAgentId?: string,
   ) {
     return this.usersService.remove(
       id,
+      actorId,
       reassignToAgentId ? parseInt(reassignToAgentId, 10) : undefined,
     );
   }

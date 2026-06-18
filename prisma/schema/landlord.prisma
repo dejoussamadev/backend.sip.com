@@ -10,9 +10,9 @@ model Landlord {
   alternativeCountryCode String?
   alternativeMobile      String?
   note                   String?
-  mapLink                String
+  mapLink                String?
   marketingAgreement     String
-  draftContract          String
+  draftContract          String?
 
   properties Property[]
 

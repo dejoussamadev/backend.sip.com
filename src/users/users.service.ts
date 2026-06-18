@@ -72,7 +72,7 @@ export class UsersService {
     return `AGT${String(nextNumber).padStart(5, '0')}`;
   }
 
-  async create(createAgentDto: CreateAgentDto) {
+  async create(createAgentDto: CreateAgentDto, actorUserId?: number) {
     const email = createAgentDto.email.toLowerCase().trim();
 
     const existingAgent = await this.prisma.user.findUnique({
@@ -122,6 +122,7 @@ export class UsersService {
       message: `A new agent ${agent.name} (${agent.agentCode}) has been added.`,
       entityId: agent.id,
       emailContext: { agentName: agent.name, agentCode: agent.agentCode },
+      actorUserId,
     });
 
     return agent;
@@ -236,7 +237,7 @@ export class UsersService {
     });
   }
 
-  async update(id: number, updateAgentDto: UpdateAgentDto) {
+  async update(id: number, updateAgentDto: UpdateAgentDto, actorUserId?: number) {
     const existingAgent = await this.findAgentByIdOrThrow(id);
 
     if (updateAgentDto.email && updateAgentDto.email !== existingAgent.email) {
@@ -278,6 +279,7 @@ export class UsersService {
         agentName: updatedAgent.name,
         agentCode: updatedAgent.agentCode,
       },
+      actorUserId,
     });
 
     return updatedAgent;
@@ -302,7 +304,7 @@ export class UsersService {
     };
   }
 
-  async remove(id: number, reassignToAgentId?: number) {
+  async remove(id: number, actorUserId?: number, reassignToAgentId?: number) {
     const existingAgent = await this.findAgentByIdOrThrow(id);
 
     const propertiesCount = await this.prisma.property.count({
@@ -334,6 +336,7 @@ export class UsersService {
         agentName: existingAgent.name,
         agentCode: existingAgent.agentCode,
       },
+      actorUserId,
     });
 
     return { message: `User ${existingAgent.name} deleted successfully` };

@@ -15,7 +15,7 @@ model User {
   designation         String?
   photo               String?
   bookmarkLimit       Int      @default(50)
-  onlinePropertyLimit Int      @default(0)
+  onlinePropertyLimit Int?
   role                Role     @default(AGENT)
   isActive            Boolean  @default(true)
   createdAt           DateTime @default(now())
