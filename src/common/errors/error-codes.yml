@@ -69,3 +69,13 @@ RESERVATION_ACCESS_DENIED: "You do not have access to this reservation."
 RESERVATION_CODE_GENERATION_FAILED: "Failed to generate a unique reservation code. Please try again."
 RESERVATION_TERMS_NOT_ACCEPTED: "You must accept the terms and conditions to submit a reservation."
 RESERVATION_PROPERTY_NOT_FOUND: "Property not found."
+
+# Auth — password reset
+PASSWORD_RESET_EMAIL_INVALID:    "Please provide a valid email address."
+PASSWORD_RESET_CODE_FORMAT:      "The code must be 6 digits."
+USER_EMAIL_NOT_FOUND:            "No account is associated with this email address."
+PASSWORD_RESET_OTP_INVALID:      "The code you entered is incorrect."
+PASSWORD_RESET_OTP_EXPIRED:      "This code has expired. Please request a new one."
+PASSWORD_RESET_OTP_MAX_ATTEMPTS: "Too many incorrect attempts. Please request a new code."
+PASSWORD_RESET_TOKEN_INVALID:    "Your reset session is invalid or has expired. Please start again."
+PASSWORD_RESET_PASSWORD_WEAK:    "Password must be at least 8 characters."

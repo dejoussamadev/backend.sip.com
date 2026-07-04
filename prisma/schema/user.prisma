@@ -30,6 +30,7 @@ model User {
   reservationsConsulted   Reservation[]         @relation("ReservationConsultant")
   reservationsApproved    Reservation[]         @relation("ReservationApprover")
   reservationLinksCreated ReservationLink[]     @relation("ReservationLinksCreated")
+  passwordResetOtps       PasswordResetOtp[]
 
   @@map("users")
 }

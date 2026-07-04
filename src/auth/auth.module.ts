@@ -4,6 +4,7 @@ import { PassportModule } from '@nestjs/passport';
 import type { StringValue } from 'ms';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
+import { PasswordResetService } from './password-reset/password-reset.service';
 import { PrismaModule } from '../prisma/prisma.module';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { LoginRequestsModule } from '../login-requests/login-requests.module';
@@ -24,7 +25,7 @@ const jwtExpiration = (process.env.JWT_EXPIRATION || '7d') as StringValue;
       signOptions: { expiresIn: jwtExpiration },
     }),
   ],
-  providers: [AuthService, JwtStrategy],
+  providers: [AuthService, PasswordResetService, JwtStrategy],
   controllers: [AuthController],
   exports: [AuthService],
 })
