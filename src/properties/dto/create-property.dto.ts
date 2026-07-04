@@ -20,6 +20,7 @@ import {
 } from '../constants/property.enums';
 import { PropertyAccess, PropertyStatus, PropertyView } from '@prisma/client';
 import { MinDateNow } from '../validators/min-date-now.validator';
+import { ToBoolean } from '../../common/utils/to-boolean.decorator';
 
 const toIntArray = (value: unknown): number[] | undefined => {
   if (value === undefined || value === null || value === '') return undefined;
@@ -33,9 +34,11 @@ export class CreatePropertyDto {
   @IsOptional() @IsString({ message: 'PROPERTY_REF_NO_STRING' }) refNo?: string;
   @IsString({ message: 'PROPERTY_NAME_REQUIRED' }) name: string;
   @IsOptional()
+  @ToBoolean()
   @IsBoolean({ message: 'PROPERTY_SHORT_TERM_BOOL' })
   shortTerm?: boolean;
   @IsOptional()
+  @ToBoolean()
   @IsBoolean({ message: 'PROPERTY_MULTIPLE_UNITS_BOOL' })
   multipleUnits?: boolean;
   @ValidateIf((o) => !o.multipleUnits)
@@ -56,6 +59,7 @@ export class CreatePropertyDto {
   @IsInt({ message: 'PROPERTY_BATHROOMS_INT' })
   bathrooms?: number;
   @IsOptional()
+  @ToBoolean()
   @IsBoolean({ message: 'PROPERTY_MAID_ROOM_BOOL' })
   maidRoom?: boolean;
 
@@ -102,9 +106,11 @@ export class CreatePropertyDto {
   @IsEnum(PropertyAccess, { message: 'PROPERTY_ACCESS_INVALID' })
   access?: PropertyAccess;
   @IsOptional()
+  @ToBoolean()
   @IsBoolean({ message: 'PROPERTY_UTILITIES_INCLUDED_BOOL' })
   utilitiesIncluded?: boolean;
   @IsOptional()
+  @ToBoolean()
   @IsBoolean({ message: 'PROPERTY_FACILITIES_ENABLED_BOOL' })
   facilitiesEnabled?: boolean;
 

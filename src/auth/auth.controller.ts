@@ -17,6 +17,10 @@ import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { CurrentUser } from './decorators/current-user.decorator';
+import { PasswordResetService } from './password-reset/password-reset.service';
+import { ForgotPasswordDto } from './password-reset/dto/forgot-password.dto';
+import { VerifyOtpDto } from './password-reset/dto/verify-otp.dto';
+import { ResetPasswordDto } from './password-reset/dto/reset-password.dto';
 import type { Request, Response } from 'express';
 import type { StringValue } from 'ms';
 
@@ -81,7 +85,10 @@ const COOKIE_SAMESITE = (process.env.COOKIE_SAMESITE ?? 'lax') as
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly passwordResetService: PasswordResetService,
+  ) {}
 
   @Post('login')
   @Throttle({ default: { limit: 20, ttl: 60000 } })
@@ -113,6 +120,33 @@ export class AuthController {
     });
 
     return body;
+  }
+
+  /**
+   * Step 1 of password reset — request a one-time code by email.
+   * Public + tightly throttled to limit enumeration / email flooding.
+   */
+  @Post('forgot-password')
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @HttpCode(HttpStatus.OK)
+  async forgotPassword(@Body() dto: ForgotPasswordDto) {
+    return this.passwordResetService.requestOtp(dto.email);
+  }
+
+  /** Step 2 of password reset — verify the code, receive a short-lived reset token. */
+  @Post('verify-otp')
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @HttpCode(HttpStatus.OK)
+  async verifyOtp(@Body() dto: VerifyOtpDto) {
+    return this.passwordResetService.verifyOtp(dto.email, dto.code);
+  }
+
+  /** Step 3 of password reset — set the new password using the reset token. */
+  @Post('reset-password')
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @HttpCode(HttpStatus.OK)
+  async resetPassword(@Body() dto: ResetPasswordDto) {
+    return this.passwordResetService.resetPassword(dto.resetToken, dto.newPassword);
   }
 
   @Get('profile')

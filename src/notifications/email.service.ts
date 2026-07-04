@@ -30,6 +30,7 @@ export interface EmailContext {
   reservationDate?: string;
   propertyRef?: string;
   rejectionReason?: string;
+  otpCode?: string;
 }
 
 /** Builds a key-value detail row for the email body. */
@@ -454,6 +455,25 @@ const EMAIL_TEMPLATES: Record<string, EmailTemplate> = {
         ctx.rejectionReason ? `Reason: ${ctx.rejectionReason}` : '',
         ``, `Please contact our team for more information.`,
         ``, `Warm regards,`, `Step In Property`].filter(Boolean).join('\n'),
+  },
+
+  PASSWORD_RESET_OTP: {
+    subject: 'Your Password Reset Code',
+    buildHtml: (ctx) => {
+      return `
+        <h2 style="margin:0 0 8px;font-size:20px;color:#1E4DCC;">Password Reset Code</h2>
+        <p style="margin:0 0 16px;font-size:14px;color:#333333;line-height:1.5;">Dear ${ctx.userName || 'there'},</p>
+        <p style="margin:0 0 16px;font-size:14px;color:#333333;line-height:1.5;">We received a request to reset your password. Use the code below to continue:</p>
+        <div style="margin:24px 0;text-align:center;">
+          <span style="display:inline-block;background:#F0F4FF;color:#1E4DCC;font-size:32px;font-weight:700;letter-spacing:8px;padding:16px 24px;border-radius:8px;">${ctx.otpCode}</span>
+        </div>
+        <p style="margin:0 0 8px;font-size:14px;color:#333333;line-height:1.5;">This code expires in <strong>2 minutes</strong>.</p>
+        <p style="margin:0;font-size:13px;color:#999999;line-height:1.5;">If you didn't request a password reset, you can safely ignore this email — your password will remain unchanged.</p>`;
+    },
+    buildText: (ctx) =>
+      [`Dear ${ctx.userName || 'there'},`, ``, `We received a request to reset your password.`,
+        `Your password reset code is: ${ctx.otpCode}`, ``, `This code expires in 2 minutes.`,
+        ``, `If you didn't request a password reset, you can safely ignore this email.`].filter(Boolean).join('\n'),
   },
 };
 
