@@ -532,6 +532,7 @@ export class PropertiesService {
     }
     if (dto.bathrooms !== undefined) updateData.bathrooms = dto.bathrooms;
     if (dto.sizeSqm !== undefined) updateData.size = dto.sizeSqm;
+    if (dto.shortTerm !== undefined) updateData.shortTerm = dto.shortTerm;
     if (dto.maidRoom !== undefined) updateData.maidRoom = dto.maidRoom;
     if (dto.balcony !== undefined) updateData.balcony = dto.balcony;
     if (dto.view !== undefined) updateData.view = dto.view;
@@ -540,7 +541,6 @@ export class PropertiesService {
       updateData.commission = dto.commissionPct;
     if (dto.downPaymentPct !== undefined)
       updateData.downPaymentPct = dto.downPaymentPct;
-    if (dto.status !== undefined) updateData.status = dto.status;
     if (dto.access !== undefined) updateData.access = dto.access;
     if (dto.utilitiesIncluded !== undefined)
       updateData.hasUtilities = dto.utilitiesIncluded;
