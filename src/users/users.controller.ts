@@ -16,11 +16,13 @@ import { UsersService } from './users.service';
 import { CreateAgentDto } from './dto/create-agent.dto';
 import { UpdateAgentDto } from './dto/update-agent.dto';
 import { UpdateMyProfileDto } from './dto/update-my-profile.dto';
+import { ChangeMyPasswordDto } from './dto/change-my-password.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Role } from '@prisma/client';
+import { Throttle } from '@nestjs/throttler';
 
 @Controller('agents')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -73,6 +75,19 @@ export class UsersController {
     @Body() updateMyProfileDto: UpdateMyProfileDto,
   ) {
     return this.usersService.updateMyProfile(user.id, updateMyProfileDto);
+  }
+
+  // Change the authenticated user's own password (requires the current one).
+  // Throttled to slow down guessing of the current password.
+  @Patch('profile/me/password')
+  @Roles(Role.AGENT, Role.ADMIN)
+  @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  changeMyPassword(
+    @CurrentUser('id') userId: number,
+    @Body() changeMyPasswordDto: ChangeMyPasswordDto,
+  ) {
+    return this.usersService.changeMyPassword(userId, changeMyPasswordDto);
   }
 
   @Get('list/simple')
