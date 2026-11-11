@@ -9,6 +9,9 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateAgentDto } from './dto/create-agent.dto';
 import { UpdateAgentDto } from './dto/update-agent.dto';
 import { UpdateMyProfileDto } from './dto/update-my-profile.dto';
+import { ChangeMyPasswordDto } from './dto/change-my-password.dto';
+import { ErrorCatalogService } from '../common/errors/error-catalog.service';
+import { AppValidationException } from '../common/errors/app-validation.exception';
 import { NotificationType, Prisma, Role } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { normalizePagination } from '../common/utils/pagination.util';
@@ -40,6 +43,7 @@ export class UsersService {
   constructor(
     private prisma: PrismaService,
     private notificationsService: NotificationsService,
+    private catalog: ErrorCatalogService,
   ) {}
 
   // Ensure the user exists before running admin actions.
@@ -224,6 +228,39 @@ export class UsersService {
       data: dto,
       select: this.defaultSelect,
     });
+  }
+
+  // Change the authenticated user's own password after verifying the current one.
+  async changeMyPassword(
+    id: number,
+    dto: ChangeMyPasswordDto,
+  ): Promise<{ success: true }> {
+    const user = await this.prisma.user.findUnique({
+      where: { id },
+      select: { id: true, password: true },
+    });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const currentMatches = await bcrypt.compare(dto.currentPassword, user.password);
+    if (!currentMatches) {
+      throw AppValidationException.from(this.catalog, [
+        { field: 'currentPassword', code: 'PASSWORD_CHANGE_CURRENT_INVALID' },
+      ]);
+    }
+
+    if (await bcrypt.compare(dto.newPassword, user.password)) {
+      throw AppValidationException.from(this.catalog, [
+        { field: 'newPassword', code: 'PASSWORD_CHANGE_SAME_AS_CURRENT' },
+      ]);
+    }
+
+    const password = await bcrypt.hash(dto.newPassword, this.SALT_ROUNDS);
+    await this.prisma.user.update({ where: { id }, data: { password } });
+
+    this.logger.log(`User ${id} changed their password`);
+    return { success: true };
   }
 
   async findSimpleList() {

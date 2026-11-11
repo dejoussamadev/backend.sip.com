@@ -79,3 +79,8 @@ PASSWORD_RESET_OTP_EXPIRED:      "This code has expired. Please request a new on
 PASSWORD_RESET_OTP_MAX_ATTEMPTS: "Too many incorrect attempts. Please request a new code."
 PASSWORD_RESET_TOKEN_INVALID:    "Your reset session is invalid or has expired. Please start again."
 PASSWORD_RESET_PASSWORD_WEAK:    "Password must be at least 8 characters."
+
+# Users — change my password
+PASSWORD_CHANGE_CURRENT_REQUIRED: "Please enter your current password."
+PASSWORD_CHANGE_CURRENT_INVALID:  "Current password is incorrect."
+PASSWORD_CHANGE_SAME_AS_CURRENT:  "New password must be different from the current password."
