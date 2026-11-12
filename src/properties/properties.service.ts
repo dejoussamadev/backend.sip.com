@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreatePropertyDto } from './dto/create-property.dto';
 import { UpdatePropertyDto } from './dto/update-property.dto';
@@ -72,6 +76,48 @@ export class PropertiesService {
     }
     if (dto.facilitiesEnabled === false) {
       dto.facilityIds = [];
+    }
+  }
+
+  /** How many times a create is attempted when its reference gets taken. */
+  private static readonly REFERENCE_MAX_ATTEMPTS = 3;
+
+  /**
+   * True when `error` is Prisma's unique-constraint violation (P2002)
+   * on `properties.referenceNumber`.
+   */
+  private isDuplicateReferenceError(error: unknown): boolean {
+    if (!(error instanceof Prisma.PrismaClientKnownRequestError)) return false;
+    if (error.code !== 'P2002') return false;
+    const target = error.meta?.target;
+    const fields = Array.isArray(target) ? target : [String(target ?? '')];
+    return fields.some((field) => String(field).includes('referenceNumber'));
+  }
+
+  /** 409 returned when a reference number cannot be saved because it already exists. */
+  private duplicateReferenceConflict(): ConflictException {
+    return new ConflictException(
+      'Reference number already exists, please submit again.',
+    );
+  }
+
+  /**
+   * Runs `attempt` (a full create transaction) and re-runs it when another
+   * create grabbed the same reference number in the meantime. Each attempt
+   * generates a fresh reference; a failed attempt is rolled back entirely.
+   * After the last attempt, the duplicate is reported as 409 instead of 500.
+   * Any other error is re-thrown untouched.
+   */
+  private async withReferenceRetry<T>(attempt: () => Promise<T>): Promise<T> {
+    for (let i = 1; ; i++) {
+      try {
+        return await attempt();
+      } catch (error) {
+        if (!this.isDuplicateReferenceError(error)) throw error;
+        if (i >= PropertiesService.REFERENCE_MAX_ATTEMPTS) {
+          throw this.duplicateReferenceConflict();
+        }
+      }
     }
   }
 
@@ -164,14 +210,11 @@ export class PropertiesService {
         ? this.ensureValidStatus(dto.status)
         : PropertyStatus.PENDING;
 
-    const referenceNumber =
-      dto.refNo && dto.refNo.trim()
-        ? dto.refNo.trim()
-        : await generateRef(
-            this.prisma,
-            dto.categoryId ? Number(dto.categoryId) : 0,
-            dto.typeId ? Number(dto.typeId) : 0,
-          );
+    // The reference is always generated server-side at save time (inside the
+    // transaction below). `dto.refNo` is only the form's preview and is ignored:
+    // trusting it caused duplicates when the preview went stale.
+    const refCategoryId = dto.categoryId ? Number(dto.categoryId) : 0;
+    const refTypeId = dto.typeId ? Number(dto.typeId) : 0;
 
     const userId = dto.agentId ? Number(dto.agentId) : undefined;
     const landlordId = dto.landlordId ? Number(dto.landlordId) : undefined;
@@ -184,8 +227,8 @@ export class PropertiesService {
       : undefined;
 
     const multipleUnits = dto.multipleUnits ?? false;
+    // referenceNumber is filled in per attempt inside the transaction.
     const createData: any = {
-      referenceNumber,
       name: dto.name,
       shortTerm: dto.shortTerm ?? false,
       multipleUnits,
@@ -226,31 +269,38 @@ export class PropertiesService {
     const facilityIds = this.dedupeIds(dto.facilityIds);
     const utilityIds = this.dedupeIds(dto.utilityIds);
 
-    const property = await this.prisma.$transaction(async (tx) => {
-      const created = await tx.property.create({ data: createData });
-
-      if (dto.facilitiesEnabled && facilityIds.length) {
-        await tx.propertyFacility.createMany({
-          data: facilityIds.map((facilityId) => ({
-            propertyId: created.id,
-            facilityId,
-          })),
-          skipDuplicates: true,
+    const property = await this.withReferenceRetry(() =>
+      this.prisma.$transaction(async (tx) => {
+        // Generate the reference inside the transaction, right before the insert,
+        // so it reflects every property saved up to now.
+        const referenceNumber = await generateRef(tx, refCategoryId, refTypeId);
+        const created = await tx.property.create({
+          data: { ...createData, referenceNumber },
         });
-      }
 
-      if (dto.utilitiesIncluded && utilityIds.length) {
-        await tx.propertyUtility.createMany({
-          data: utilityIds.map((utilityId) => ({
-            propertyId: created.id,
-            utilityId,
-          })),
-          skipDuplicates: true,
-        });
-      }
+        if (dto.facilitiesEnabled && facilityIds.length) {
+          await tx.propertyFacility.createMany({
+            data: facilityIds.map((facilityId) => ({
+              propertyId: created.id,
+              facilityId,
+            })),
+            skipDuplicates: true,
+          });
+        }
 
-      return created;
-    });
+        if (dto.utilitiesIncluded && utilityIds.length) {
+          await tx.propertyUtility.createMany({
+            data: utilityIds.map((utilityId) => ({
+              propertyId: created.id,
+              utilityId,
+            })),
+            skipDuplicates: true,
+          });
+        }
+
+        return created;
+      }),
+    );
 
     const now = new Date().toLocaleString('en-GB', {
       year: 'numeric',
@@ -725,10 +775,18 @@ export class PropertiesService {
     const utilityIds = this.dedupeIds(dto.utilityIds);
 
     const updated = await this.prisma.$transaction(async (tx) => {
-      const result = await tx.property.update({
-        where: { id },
-        data: updateData,
-      });
+      // replace() may set an explicit refNo; a clash is a 409, not a 500.
+      const result = await tx.property
+        .update({
+          where: { id },
+          data: updateData,
+        })
+        .catch((error: unknown) => {
+          if (this.isDuplicateReferenceError(error)) {
+            throw this.duplicateReferenceConflict();
+          }
+          throw error;
+        });
 
       await tx.propertyFacility.deleteMany({ where: { propertyId: id } });
       if (dto.facilitiesEnabled && facilityIds.length) {
