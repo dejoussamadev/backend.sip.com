@@ -11,6 +11,16 @@ import {
 import { Type } from 'class-transformer';
 import { Role } from '@prisma/client';
 
+/**
+ * Payload for creating an agent/admin user.
+ *
+ * IMPORTANT: do NOT add property initializers (`field = value`) here.
+ * `UpdateAgentDto` extends this class via `PartialType`, which copies
+ * initializers into every update body — a default here silently overwrites
+ * that field on every admin edit (this previously demoted admins to AGENT).
+ * Defaults live in the Prisma schema (`@default(...)`) and in
+ * `UsersService.create()` instead.
+ */
 export class CreateAgentDto {
   @IsString()
   @IsNotEmpty()
@@ -44,11 +54,14 @@ export class CreateAgentDto {
   @IsOptional()
   photo?: string;
 
-  /** Coerce string → number so @IsInt() passes when frontend sends "50" */
+  /**
+   * Coerce string → number so @IsInt() passes when frontend sends "50".
+   * Omitted → DB default (`@default(50)`).
+   */
   @Type(() => Number)
   @IsInt()
   @IsOptional()
-  bookmarkLimit?: number = 50;
+  bookmarkLimit?: number;
 
   /** Coerce string → number so @IsInt() passes when frontend sends "1" */
   @Type(() => Number)
@@ -56,11 +69,13 @@ export class CreateAgentDto {
   @IsOptional()
   onlinePropertyLimit?: number | null;
 
+  /** Omitted → AGENT (applied in `UsersService.create()` and the DB default). */
   @IsEnum(Role)
   @IsOptional()
-  role?: Role = Role.AGENT;
+  role?: Role;
 
+  /** Omitted → active (DB default `@default(true)`). */
   @IsBoolean()
   @IsOptional()
-  isActive?: boolean = true;
+  isActive?: boolean;
 }
